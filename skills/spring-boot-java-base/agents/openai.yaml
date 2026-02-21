@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spring Boot 4 Java + Modulith"
+  short_description: "Build Spring Boot 4 and Modulith backends"
+  default_prompt: "Use $spring-boot-java-base to scaffold a Spring Boot 4 feature with spring-modulith-starter-core, clean module boundaries, validation, persistence, and tests."
