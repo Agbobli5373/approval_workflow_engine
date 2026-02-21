@@ -1,6 +1,7 @@
 package com.isaac.approvalworkflowengine;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -32,7 +33,7 @@ class ErrorEnvelopeAndCorrelationTest {
 
     @Test
     void validationErrorsUseStandardEnvelope() throws Exception {
-        mockMvc.perform(get("/api/v1/platform-test/validation").param("value", ""))
+        mockMvc.perform(get("/api/v1/platform-test/validation").param("value", "").with(user("admin").roles("WORKFLOW_ADMIN")))
             .andExpect(status().isBadRequest())
             .andExpect(header().exists(CorrelationIdContext.HEADER_NAME))
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
@@ -45,7 +46,7 @@ class ErrorEnvelopeAndCorrelationTest {
 
     @Test
     void unexpectedErrorsUseInternalErrorCode() throws Exception {
-        mockMvc.perform(get("/api/v1/platform-test/runtime"))
+        mockMvc.perform(get("/api/v1/platform-test/runtime").with(user("admin").roles("WORKFLOW_ADMIN")))
             .andExpect(status().isInternalServerError())
             .andExpect(header().exists(CorrelationIdContext.HEADER_NAME))
             .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
@@ -54,14 +55,14 @@ class ErrorEnvelopeAndCorrelationTest {
 
     @Test
     void conflictPlaceholderMapsToConflictError() throws Exception {
-        mockMvc.perform(get("/api/v1/platform-test/conflict"))
+        mockMvc.perform(get("/api/v1/platform-test/conflict").with(user("admin").roles("WORKFLOW_ADMIN")))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.code").value("CONFLICT"));
     }
 
     @Test
     void generatesCorrelationIdWhenMissing() throws Exception {
-        mockMvc.perform(get("/api/v1/platform-test/ok"))
+        mockMvc.perform(get("/api/v1/platform-test/ok").with(user("admin").roles("WORKFLOW_ADMIN")))
             .andExpect(status().isOk())
             .andExpect(header().exists(CorrelationIdContext.HEADER_NAME))
             .andExpect(header().string(CorrelationIdContext.HEADER_NAME, org.hamcrest.Matchers.not(org.hamcrest.Matchers.blankOrNullString())));
@@ -69,7 +70,9 @@ class ErrorEnvelopeAndCorrelationTest {
 
     @Test
     void propagatesIncomingCorrelationId() throws Exception {
-        mockMvc.perform(get("/api/v1/platform-test/ok").header(CorrelationIdContext.HEADER_NAME, "corr-e0-123"))
+        mockMvc.perform(get("/api/v1/platform-test/ok")
+                .header(CorrelationIdContext.HEADER_NAME, "corr-e0-123")
+                .with(user("admin").roles("WORKFLOW_ADMIN")))
             .andExpect(status().isOk())
             .andExpect(header().string(CorrelationIdContext.HEADER_NAME, "corr-e0-123"));
     }

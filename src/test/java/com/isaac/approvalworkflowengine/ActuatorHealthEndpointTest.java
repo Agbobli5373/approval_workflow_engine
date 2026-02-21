@@ -3,6 +3,7 @@ package com.isaac.approvalworkflowengine;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,12 @@ class ActuatorHealthEndpointTest {
     @Test
     void readinessEndpointIncludesDatabaseHealth() throws Exception {
         mockMvc.perform(get("/actuator/health/readiness"))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void readinessEndpointIncludesDatabaseHealthForAuthenticatedRequest() throws Exception {
+        mockMvc.perform(get("/actuator/health/readiness").with(user("requestor").roles("REQUESTOR")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("UP"))
             .andExpect(jsonPath("$.components.db.status").value("UP"));

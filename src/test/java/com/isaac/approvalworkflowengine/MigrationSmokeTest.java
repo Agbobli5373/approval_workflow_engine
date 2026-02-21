@@ -28,11 +28,30 @@ class MigrationSmokeTest {
             """
             select count(*)
             from information_schema.tables
-            where upper(table_name) in ('IDEMPOTENCY_KEYS', 'OUTBOX_EVENTS', 'JOB_LOCKS')
+            where upper(table_schema) = 'PUBLIC'
+              and upper(table_type) = 'BASE TABLE'
+              and upper(table_name) in (
+                'IDEMPOTENCY_KEYS',
+                'OUTBOX_EVENTS',
+                'JOB_LOCKS',
+                'USERS',
+                'USER_ROLES',
+                'AUTH_TOKEN_REVOCATIONS'
+            )
             """,
             Integer.class
         );
 
-        assertThat(tableCount).isEqualTo(3);
+        assertThat(tableCount).isEqualTo(6);
+    }
+
+    @Test
+    void localTestSeedUsersArePresent() {
+        Integer userCount = jdbcTemplate.queryForObject(
+            "select count(*) from users where external_subject in ('admin', 'requestor', 'approver')",
+            Integer.class
+        );
+
+        assertThat(userCount).isEqualTo(3);
     }
 }

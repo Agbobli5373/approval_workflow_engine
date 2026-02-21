@@ -8,12 +8,65 @@ servers:
 security:
   - bearerAuth: []
 tags:
+  - name: Auth
   - name: Requests
   - name: Tasks
   - name: Workflows
   - name: Audit
   - name: Webhooks
 paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      summary: Authenticate with seeded local/test user and issue JWT access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      summary: Revoke current access token
+      responses:
+        '204':
+          description: Logged out
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      operationId: me
+      summary: Return current authenticated user profile
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /requests:
     post:
       tags: [Requests]
@@ -506,6 +559,11 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ApiError' }
+    RateLimited:
+      description: Request rejected due to rate limit
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
 
   schemas:
     RequestStatus:
@@ -545,6 +603,35 @@ components:
       properties:
         field: { type: string }
         reason: { type: string }
+
+    LoginRequest:
+      type: object
+      required: [usernameOrEmail, password]
+      properties:
+        usernameOrEmail: { type: string }
+        password: { type: string }
+
+    LoginResponse:
+      type: object
+      required: [accessToken, tokenType, expiresAt]
+      properties:
+        accessToken: { type: string }
+        tokenType: { type: string, example: Bearer }
+        expiresAt: { type: string, format: date-time }
+
+    CurrentUserResponse:
+      type: object
+      required: [id, username, email, displayName, roles]
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        email: { type: string, format: email }
+        displayName: { type: string }
+        department: { type: string, nullable: true }
+        employeeId: { type: string, nullable: true }
+        roles:
+          type: array
+          items: { type: string }
 
     RequestCreateInput:
       type: object

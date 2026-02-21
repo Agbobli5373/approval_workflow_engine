@@ -1,6 +1,7 @@
 package com.isaac.approvalworkflowengine;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -22,27 +23,41 @@ class PlatformEntryControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    void rootRedirectsToSwaggerUi() throws Exception {
+    void rootRequiresAuthentication() throws Exception {
         mockMvc.perform(get("/"))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void rootRedirectsToSwaggerUiForAuthenticatedUser() throws Exception {
+        mockMvc.perform(get("/").with(user("admin").roles("WORKFLOW_ADMIN")))
             .andExpect(status().is3xxRedirection())
             .andExpect(redirectedUrl("/swagger-ui/index.html"));
     }
 
     @Test
-    void iconRequestsReturnNoContent() throws Exception {
+    void iconRequestsRequireAuthentication() throws Exception {
         mockMvc.perform(get("/favicon.ico"))
-            .andExpect(status().isNoContent());
+            .andExpect(status().isUnauthorized());
 
         mockMvc.perform(get("/apple-touch-icon.png"))
-            .andExpect(status().isNoContent());
+            .andExpect(status().isUnauthorized());
 
         mockMvc.perform(get("/apple-touch-icon-precomposed.png"))
-            .andExpect(status().isNoContent());
+            .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void swaggerUiEndpointIsAvailable() throws Exception {
+    void swaggerUiEndpointIsPublicInLocalAuthMode() throws Exception {
         MvcResult result = mockMvc.perform(get("/swagger-ui/index.html"))
+            .andReturn();
+
+        assertThat(result.getResponse().getStatus()).isIn(200, 302);
+    }
+
+    @Test
+    void swaggerUiEndpointIsAvailableForAdmin() throws Exception {
+        MvcResult result = mockMvc.perform(get("/swagger-ui/index.html").with(user("admin").roles("WORKFLOW_ADMIN")))
             .andReturn();
 
         assertThat(result.getResponse().getStatus()).isIn(200, 302);

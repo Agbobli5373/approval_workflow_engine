@@ -2,7 +2,7 @@
 
 ## Scope
 
-This plan defines v1 schema objects and migration order for the Approval Workflow Engine.
+This plan defines baseline schema objects and migration order for the Approval Workflow Engine.
 
 ## Naming Conventions
 
@@ -13,8 +13,8 @@ This plan defines v1 schema objects and migration order for the Approval Workflo
 
 ## Migration Order
 
-1. `V1__core_extensions.sql`
-2. `V2__users_and_roles.sql`
+1. `V1__platform_foundation.sql` (E0: `idempotency_keys`, `outbox_events`, `job_locks`)
+2. `V2__users_and_roles.sql` (E1: `users`, `user_roles`, `auth_token_revocations`)
 3. `V3__workflow_definitions_and_versions.sql`
 4. `V4__workflow_graph_nodes_edges.sql`
 5. `V5__rulesets.sql`
@@ -23,12 +23,18 @@ This plan defines v1 schema objects and migration order for the Approval Workflo
 8. `V8__delegations.sql`
 9. `V9__audit_events.sql`
 10. `V10__outbox_and_webhooks.sql`
-11. `V11__idempotency_and_job_locks.sql`
 
 ## E0 Implementation Note
 
 - E0 applies the foundational migration as `V1__platform_foundation.sql`.
 - Domain schema migrations start at `V2` in subsequent epics.
+
+## E1 Implementation Note
+
+- E1 applies `V2__users_and_roles.sql` in both PostgreSQL and H2 migration tracks.
+- Local/test profiles also run repeatable seed scripts under:
+  - `db/seed/localtest/postgresql/`
+  - `db/seed/localtest/h2/`
 
 ## Core Tables
 
@@ -39,14 +45,14 @@ This plan defines v1 schema objects and migration order for the Approval Workflo
 - `email varchar(320) unique not null`
 - `display_name varchar(160) not null`
 - `department varchar(80)`
-- `manager_user_id uuid null`
+- `employee_id varchar(80) null`
+- `password_hash varchar(120) null` (used in `LOCAL_AUTH`)
 - `active boolean not null default true`
 - timestamps
 
 Indexes:
 
 - `idx_users_department`
-- `idx_users_manager`
 
 ### `user_roles`
 
@@ -54,6 +60,16 @@ Indexes:
 - `user_id uuid not null`
 - `role_code varchar(64) not null`
 - unique `(user_id, role_code)`
+
+### `auth_token_revocations`
+
+- `jti varchar(64) pk`
+- `revoked_at timestamptz not null`
+- `expires_at timestamptz not null`
+
+Indexes:
+
+- `idx_auth_token_revocations_expires_at`
 
 ## Workflow Definition Tables
 
