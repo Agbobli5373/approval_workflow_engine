@@ -5,6 +5,7 @@ import com.isaac.approvalworkflowengine.shared.error.DomainConflictException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -13,10 +14,12 @@ import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -68,6 +71,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({
         MissingServletRequestParameterException.class,
+        MissingRequestHeaderException.class,
         HttpMessageNotReadableException.class,
         BindException.class,
         MethodArgumentTypeMismatchException.class,
@@ -88,6 +92,20 @@ public class GlobalExceptionHandler {
             HttpStatus.CONFLICT,
             "CONFLICT",
             exception.getMessage(),
+            List.of(),
+            request
+        );
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiError> handleOptimisticLockConflict(
+        ObjectOptimisticLockingFailureException exception,
+        HttpServletRequest request
+    ) {
+        return buildResponse(
+            HttpStatus.CONFLICT,
+            "CONFLICT",
+            "Concurrent update conflict",
             List.of(),
             request
         );
@@ -116,6 +134,20 @@ public class GlobalExceptionHandler {
             HttpStatus.FORBIDDEN,
             "FORBIDDEN",
             "Access denied",
+            List.of(),
+            request
+        );
+    }
+
+    @ExceptionHandler(NoSuchElementException.class)
+    public ResponseEntity<ApiError> handleNotFound(
+        NoSuchElementException exception,
+        HttpServletRequest request
+    ) {
+        return buildResponse(
+            HttpStatus.NOT_FOUND,
+            "NOT_FOUND",
+            exception.getMessage(),
             List.of(),
             request
         );
