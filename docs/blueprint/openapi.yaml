@@ -1,0 +1,778 @@
+openapi: 3.1.0
+info:
+  title: Approval Workflow Engine API
+  version: 1.0.0
+  description: API-first contract for the Spring Boot 4 Approval Workflow Engine.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+tags:
+  - name: Requests
+  - name: Tasks
+  - name: Workflows
+  - name: Audit
+  - name: Webhooks
+paths:
+  /requests:
+    post:
+      tags: [Requests]
+      operationId: createRequest
+      summary: Create request draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestCreateInput'
+      responses:
+        '201':
+          description: Request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestResource'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    get:
+      tags: [Requests]
+      operationId: listRequests
+      summary: List requests with filters
+      parameters:
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/RequestTypeFilter'
+        - $ref: '#/components/parameters/CreatedFromFilter'
+        - $ref: '#/components/parameters/CreatedToFilter'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: Request list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedRequestResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /requests/{requestId}:
+    get:
+      tags: [Requests]
+      operationId: getRequest
+      summary: Get request details
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Request details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Requests]
+      operationId: updateRequest
+      summary: Update request (only DRAFT or CHANGES_REQUESTED)
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestUpdateInput'
+      responses:
+        '200':
+          description: Updated request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestResource'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /requests/{requestId}/submit:
+    post:
+      tags: [Requests]
+      operationId: submitRequest
+      summary: Submit request for workflow processing
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: Submission accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestResource'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /requests/{requestId}/cancel:
+    post:
+      tags: [Requests]
+      operationId: cancelRequest
+      summary: Cancel request if not completed
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Request cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestResource'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /tasks:
+    get:
+      tags: [Tasks]
+      operationId: listTasks
+      summary: List tasks for current actor
+      parameters:
+        - name: assignedTo
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [me, role]
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/TaskStatus'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: Task list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedTaskResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /tasks/{taskId}/claim:
+    post:
+      tags: [Tasks]
+      operationId: claimTask
+      summary: Claim pending task
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Task claimed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /tasks/{taskId}/decisions:
+    post:
+      tags: [Tasks]
+      operationId: decideTask
+      summary: Apply task decision
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskDecisionInput'
+      responses:
+        '200':
+          description: Decision accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDecisionResource'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /workflow-definitions:
+    post:
+      tags: [Workflows]
+      operationId: createWorkflowDefinition
+      summary: Create workflow definition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowDefinitionInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDefinitionResource'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /workflow-definitions/{definitionKey}/versions:
+    post:
+      tags: [Workflows]
+      operationId: createWorkflowVersion
+      summary: Create workflow draft version
+      parameters:
+        - $ref: '#/components/parameters/DefinitionKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowVersionInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowVersionResource'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /workflow-versions/{workflowVersionId}/activate:
+    post:
+      tags: [Workflows]
+      operationId: activateWorkflowVersion
+      summary: Activate workflow version
+      parameters:
+        - $ref: '#/components/parameters/WorkflowVersionId'
+      responses:
+        '200':
+          description: Activated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowVersionResource'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /workflow-versions/{workflowVersionId}:
+    get:
+      tags: [Workflows]
+      operationId: getWorkflowVersion
+      summary: Get workflow version details
+      parameters:
+        - $ref: '#/components/parameters/WorkflowVersionId'
+      responses:
+        '200':
+          description: Version details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowVersionResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /requests/{requestId}/audit:
+    get:
+      tags: [Audit]
+      operationId: getRequestAudit
+      summary: Retrieve request audit timeline
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Audit events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedAuditEventResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /webhooks/subscriptions:
+    post:
+      tags: [Webhooks]
+      operationId: createWebhookSubscription
+      summary: Register webhook subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookSubscriptionInput'
+      responses:
+        '201':
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSubscriptionResource'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    get:
+      tags: [Webhooks]
+      operationId: listWebhookSubscriptions
+      summary: List webhook subscriptions
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Subscriptions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedWebhookSubscriptionResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    WorkflowVersionId:
+      name: workflowVersionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    DefinitionKey:
+      name: definitionKey
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 100 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 120
+    StatusFilter:
+      name: status
+      in: query
+      schema:
+        $ref: '#/components/schemas/RequestStatus'
+    RequestTypeFilter:
+      name: requestType
+      in: query
+      schema:
+        type: string
+    CreatedFromFilter:
+      name: createdFrom
+      in: query
+      schema:
+        type: string
+        format: date-time
+    CreatedToFilter:
+      name: createdTo
+      in: query
+      schema:
+        type: string
+        format: date-time
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 20
+    Sort:
+      name: sort
+      in: query
+      schema:
+        type: string
+        example: createdAt,desc
+
+  responses:
+    BadRequest:
+      description: Invalid input
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    Forbidden:
+      description: Access denied
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    Conflict:
+      description: Conflict or invalid state transition
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+
+  schemas:
+    RequestStatus:
+      type: string
+      enum: [DRAFT, SUBMITTED, IN_REVIEW, CHANGES_REQUESTED, APPROVED, REJECTED, CANCELLED, EXPIRED]
+
+    TaskStatus:
+      type: string
+      enum: [PENDING, CLAIMED, APPROVED, REJECTED, CANCELLED, EXPIRED, SKIPPED]
+
+    TaskDecisionAction:
+      type: string
+      enum: [APPROVE, REJECT, SEND_BACK, DELEGATE]
+
+    WorkflowVersionStatus:
+      type: string
+      enum: [DRAFT, ACTIVE, RETIRED]
+
+    ApiError:
+      type: object
+      required: [code, message, correlationId, details]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        correlationId:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiErrorDetail'
+
+    ApiErrorDetail:
+      type: object
+      required: [field, reason]
+      properties:
+        field: { type: string }
+        reason: { type: string }
+
+    RequestCreateInput:
+      type: object
+      required: [requestType, title, payload]
+      properties:
+        requestType: { type: string, maxLength: 80 }
+        title: { type: string, maxLength: 200 }
+        description: { type: string }
+        payload: { type: object, additionalProperties: true }
+        amount: { type: number }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        department: { type: string, maxLength: 80 }
+        costCenter: { type: string, maxLength: 80 }
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentMetadata'
+
+    RequestUpdateInput:
+      type: object
+      properties:
+        title: { type: string, maxLength: 200 }
+        description: { type: string }
+        payload: { type: object, additionalProperties: true }
+        amount: { type: number }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        department: { type: string, maxLength: 80 }
+        costCenter: { type: string, maxLength: 80 }
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentMetadata'
+
+    AttachmentMetadata:
+      type: object
+      required: [name, contentType, sizeBytes]
+      properties:
+        name: { type: string }
+        contentType: { type: string }
+        sizeBytes: { type: integer, minimum: 1 }
+        objectKey: { type: string }
+
+    RequestResource:
+      type: object
+      required: [id, status, requestType, title, payload, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        requestType: { type: string }
+        title: { type: string }
+        description: { type: string }
+        payload: { type: object, additionalProperties: true }
+        amount: { type: number }
+        currency: { type: string }
+        department: { type: string }
+        costCenter: { type: string }
+        attachments:
+          type: array
+          items: { $ref: '#/components/schemas/AttachmentMetadata' }
+        status: { $ref: '#/components/schemas/RequestStatus' }
+        workflowVersionId: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    TaskDecisionInput:
+      type: object
+      required: [action]
+      properties:
+        action: { $ref: '#/components/schemas/TaskDecisionAction' }
+        comment: { type: string, maxLength: 4000 }
+        delegateUserId:
+          type: string
+          format: uuid
+          description: Required when action is DELEGATE
+
+    TaskResource:
+      type: object
+      required: [id, status, requestId, stepKey, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        requestId: { type: string, format: uuid }
+        workflowInstanceId: { type: string, format: uuid }
+        stepKey: { type: string }
+        assigneeUserId: { type: string, format: uuid, nullable: true }
+        assigneeRole: { type: string, nullable: true }
+        status: { $ref: '#/components/schemas/TaskStatus' }
+        dueAt: { type: string, format: date-time, nullable: true }
+        claimedAt: { type: string, format: date-time, nullable: true }
+        claimedByUserId: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    TaskDecisionResource:
+      type: object
+      required: [id, taskId, action, actedByUserId, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        taskId: { type: string, format: uuid }
+        action: { $ref: '#/components/schemas/TaskDecisionAction' }
+        comment: { type: string, nullable: true }
+        actedByUserId: { type: string, format: uuid }
+        actedOnBehalfOfUserId: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    WorkflowDefinitionInput:
+      type: object
+      required: [definitionKey, name, requestType]
+      properties:
+        definitionKey: { type: string, maxLength: 100 }
+        name: { type: string, maxLength: 150 }
+        requestType: { type: string, maxLength: 80 }
+
+    WorkflowDefinitionResource:
+      type: object
+      required: [id, definitionKey, name, requestType]
+      properties:
+        id: { type: string, format: uuid }
+        definitionKey: { type: string }
+        name: { type: string }
+        requestType: { type: string }
+
+    WorkflowVersionInput:
+      type: object
+      required: [graph]
+      properties:
+        graph:
+          type: object
+          additionalProperties: true
+          description: Canonical graph JSON with nodes and edges.
+
+    WorkflowVersionResource:
+      type: object
+      required: [id, definitionKey, versionNo, status, graph]
+      properties:
+        id: { type: string, format: uuid }
+        definitionKey: { type: string }
+        versionNo: { type: integer }
+        status: { $ref: '#/components/schemas/WorkflowVersionStatus' }
+        graph:
+          type: object
+          additionalProperties: true
+        checksumSha256: { type: string, nullable: true }
+        activatedAt: { type: string, format: date-time, nullable: true }
+
+    AuditEventResource:
+      type: object
+      required: [id, requestId, eventType, occurredAt, metadata]
+      properties:
+        id: { type: string, format: uuid }
+        requestId: { type: string, format: uuid }
+        workflowVersionId: { type: string, format: uuid, nullable: true }
+        eventType: { type: string }
+        actorUserId: { type: string, format: uuid, nullable: true }
+        occurredAt: { type: string, format: date-time }
+        metadata:
+          type: object
+          additionalProperties: true
+        prevHash: { type: string, nullable: true }
+        hash: { type: string }
+
+    WebhookSubscriptionInput:
+      type: object
+      required: [targetUrl, secret, eventTypes]
+      properties:
+        targetUrl: { type: string, format: uri }
+        secret: { type: string, minLength: 16 }
+        eventTypes:
+          type: array
+          items:
+            type: string
+          minItems: 1
+
+    WebhookSubscriptionResource:
+      type: object
+      required: [id, targetUrl, eventTypes, active, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        targetUrl: { type: string, format: uri }
+        eventTypes:
+          type: array
+          items: { type: string }
+        active: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    PageMetadata:
+      type: object
+      required: [page, size, totalElements, totalPages]
+      properties:
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer }
+        totalPages: { type: integer }
+
+    PagedRequestResource:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/RequestResource' }
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+
+    PagedTaskResource:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/TaskResource' }
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+
+    PagedAuditEventResource:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AuditEventResource' }
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+
+    PagedWebhookSubscriptionResource:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/WebhookSubscriptionResource' }
+        page:
+          $ref: '#/components/schemas/PageMetadata'
