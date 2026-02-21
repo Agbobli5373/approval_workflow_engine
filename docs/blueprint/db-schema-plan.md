@@ -25,6 +25,11 @@ This plan defines v1 schema objects and migration order for the Approval Workflo
 10. `V10__outbox_and_webhooks.sql`
 11. `V11__idempotency_and_job_locks.sql`
 
+## E0 Implementation Note
+
+- E0 applies the foundational migration as `V1__platform_foundation.sql`.
+- Domain schema migrations start at `V2` in subsequent epics.
+
 ## Core Tables
 
 ### `users`

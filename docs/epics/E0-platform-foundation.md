@@ -6,7 +6,7 @@ Establish a production-ready Spring Boot 4 baseline with clear module boundaries
 
 ## Features To Implement
 
-- Spring Boot 4 project baseline with Java 17+.
+- Spring Boot 4 project baseline with Java 25.
 - Initial module structure:
   - `auth`
   - `users`
@@ -55,3 +55,35 @@ Establish a production-ready Spring Boot 4 baseline with clear module boundaries
 - Flyway applies migrations successfully on empty database.
 - Every error response includes `correlationId`.
 - Health endpoint reports app and DB status.
+
+## Implemented Artifacts (E0)
+
+- Base package normalized to `com.isaac.approvalworkflowengine`.
+- Modulith module roots created:
+  - `auth`
+  - `users`
+  - `requests`
+  - `workflowtemplate`
+  - `workflowruntime`
+  - `rules`
+  - `audit`
+  - `notifications`
+  - `integrationsoutbox`
+  - `shared`
+- Foundational Flyway migrations:
+  - `src/main/resources/db/migration/postgresql/V1__platform_foundation.sql`
+  - `src/main/resources/db/migration/h2/V1__platform_foundation.sql`
+- Shared platform primitives:
+  - correlation id filter
+  - global exception handler and API error envelope
+  - pagination utility baseline
+  - profile-based configuration (`application-local`, `application-test`, `application-prod`)
+
+## Baseline Test Suite (E0)
+
+- `ApprovalWorkflowEngineApplicationTests`: default profile context boot.
+- `ModulithArchitectureTest`: module verification and cycle checks.
+- `MigrationSmokeTest`: H2 migration execution and foundation table presence.
+- `ErrorEnvelopeAndCorrelationTest`: validation/runtime/conflict envelope mapping and correlation header behavior.
+- `ActuatorHealthEndpointTest`: liveness/readiness endpoint checks with DB component.
+- `OpenApiContractValidationTest`: parse/validate `docs/blueprint/openapi.yaml`.

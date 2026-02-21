@@ -1,4 +1,4 @@
-package com.isaac.approval_workflow_engine;
+package com.isaac.approvalworkflowengine;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
