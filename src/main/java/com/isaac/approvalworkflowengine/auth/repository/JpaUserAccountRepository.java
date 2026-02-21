@@ -5,6 +5,8 @@ import com.isaac.approvalworkflowengine.auth.repository.entity.UserEntity;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
+
+import com.isaac.approvalworkflowengine.auth.repository.entity.UserRoleEntity;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +35,7 @@ public class JpaUserAccountRepository implements UserAccountRepository {
 
     private UserAccount toUserAccount(UserEntity entity) {
         Set<String> roles = entity.getRoles().stream()
-            .map(roleEntity -> roleEntity.getRoleCode())
+            .map(UserRoleEntity::getRoleCode)
             .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
 
         return new UserAccount(
