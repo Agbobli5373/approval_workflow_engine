@@ -23,7 +23,13 @@ class MigrationSmokeTest {
     }
 
     @Test
-    void h2FlywayMigrationCreatesFoundationTables() {
+    void postgresqlRequestLifecycleMigrationExists() {
+        assertThat(new ClassPathResource("db/migration/postgresql/V3__requests_lifecycle.sql").exists())
+            .isTrue();
+    }
+
+    @Test
+    void h2FlywayMigrationCreatesPlatformAuthAndRequestTables() {
         Integer tableCount = jdbcTemplate.queryForObject(
             """
             select count(*)
@@ -36,13 +42,15 @@ class MigrationSmokeTest {
                 'JOB_LOCKS',
                 'USERS',
                 'USER_ROLES',
-                'AUTH_TOKEN_REVOCATIONS'
+                'AUTH_TOKEN_REVOCATIONS',
+                'REQUESTS',
+                'REQUEST_STATUS_TRANSITIONS'
             )
             """,
             Integer.class
         );
 
-        assertThat(tableCount).isEqualTo(6);
+        assertThat(tableCount).isEqualTo(8);
     }
 
     @Test
