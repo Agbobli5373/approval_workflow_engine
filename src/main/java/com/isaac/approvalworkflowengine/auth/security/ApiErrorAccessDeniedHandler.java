@@ -3,6 +3,8 @@ package com.isaac.approvalworkflowengine.auth.security;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+
+import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -19,9 +21,9 @@ public class ApiErrorAccessDeniedHandler implements AccessDeniedHandler {
 
     @Override
     public void handle(
-        HttpServletRequest request,
-        HttpServletResponse response,
-        AccessDeniedException accessDeniedException
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull AccessDeniedException accessDeniedException
     ) throws IOException {
         errorResponseWriter.write(request, response, HttpStatus.FORBIDDEN, "FORBIDDEN", "Access denied");
     }
