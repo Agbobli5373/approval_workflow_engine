@@ -30,6 +30,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
     implementation 'org.springframework.boot:spring-boot-starter-flyway'
     implementation 'org.springframework.modulith:spring-modulith-starter-core'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.postgresql:postgresql'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
