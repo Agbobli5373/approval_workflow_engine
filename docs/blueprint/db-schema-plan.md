@@ -15,10 +15,10 @@ This plan defines baseline schema objects and migration order for the Approval W
 
 1. `V1__platform_foundation.sql` (E0: `idempotency_keys`, `outbox_events`, `job_locks`)
 2. `V2__users_and_roles.sql` (E1: `users`, `user_roles`, `auth_token_revocations`)
-3. `V3__workflow_definitions_and_versions.sql`
-4. `V4__workflow_graph_nodes_edges.sql`
-5. `V5__rulesets.sql`
-6. `V6__requests.sql`
+3. `V3__requests_lifecycle.sql` (E2: `requests`, `request_status_transitions`)
+4. `V4__workflow_definitions_and_versions.sql`
+5. `V5__workflow_graph_nodes_edges.sql`
+6. `V6__rulesets.sql`
 7. `V7__workflow_runtime_instances_tasks.sql`
 8. `V8__delegations.sql`
 9. `V9__audit_events.sql`
@@ -35,6 +35,11 @@ This plan defines baseline schema objects and migration order for the Approval W
 - Local/test profiles also run repeatable seed scripts under:
   - `db/seed/localtest/postgresql/`
   - `db/seed/localtest/h2/`
+
+## E2 Implementation Note
+
+- E2 applies `V3__requests_lifecycle.sql` in both PostgreSQL and H2 migration tracks.
+- Lifecycle transition history is persisted in `request_status_transitions`.
 
 ## Core Tables
 
@@ -144,7 +149,7 @@ Indexes:
 - `request_type varchar(80) not null`
 - `title varchar(200) not null`
 - `description text null`
-- `payload jsonb not null`
+- `payload_json jsonb not null`
 - `amount numeric(18,2) null`
 - `currency char(3) null`
 - `department varchar(80) null`
@@ -169,7 +174,7 @@ Indexes:
 - `request_id uuid not null`
 - `from_status varchar(30) not null`
 - `to_status varchar(30) not null`
-- `changed_by_user_id uuid not null`
+- `changed_by_subject varchar(128) not null`
 - `reason text null`
 - `changed_at timestamptz not null`
 
