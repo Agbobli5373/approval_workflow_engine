@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Validated
 @RestController
-@RequestMapping("/api/v1/requests")
+@RequestMapping(path = "/api/requests", version = "1.0")
 public class RequestController {
 
     private final RequestLifecycleService requestLifecycleService;

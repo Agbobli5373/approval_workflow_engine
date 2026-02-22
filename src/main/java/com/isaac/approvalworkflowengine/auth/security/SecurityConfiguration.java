@@ -42,7 +42,7 @@ public class SecurityConfiguration {
                 authorize.requestMatchers("/actuator/health/liveness").permitAll();
 
                 if (securityProperties.getMode() == SecurityMode.LOCAL_AUTH) {
-                    authorize.requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll();
+                    authorize.requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll();
                     authorize.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/v3/api-docs", "/v3/api-docs.yaml")
                         .permitAll();
                 } else {

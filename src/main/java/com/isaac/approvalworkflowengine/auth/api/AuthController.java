@@ -16,7 +16,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping(path = "/api/auth", version = "1.0")
 @ConditionalOnProperty(prefix = "app.security", name = "mode", havingValue = "LOCAL_AUTH", matchIfMissing = true)
 public class AuthController {
 
