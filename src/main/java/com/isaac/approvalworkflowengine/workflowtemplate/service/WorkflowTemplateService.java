@@ -18,6 +18,7 @@ import com.isaac.approvalworkflowengine.workflowtemplate.checksum.WorkflowGraphC
 import com.isaac.approvalworkflowengine.workflowtemplate.model.WorkflowVersionStatus;
 import com.isaac.approvalworkflowengine.rules.RuleSetLookup;
 import com.isaac.approvalworkflowengine.workflowtemplate.WorkflowTemplateLookup;
+import com.isaac.approvalworkflowengine.workflowtemplate.WorkflowTemplateRuntimeLookup;
 import com.isaac.approvalworkflowengine.workflowtemplate.repository.WorkflowDefinitionJpaRepository;
 import com.isaac.approvalworkflowengine.workflowtemplate.repository.WorkflowEdgeJpaRepository;
 import com.isaac.approvalworkflowengine.workflowtemplate.repository.WorkflowNodeJpaRepository;
@@ -41,7 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
-public class WorkflowTemplateService implements WorkflowTemplateLookup {
+public class WorkflowTemplateService implements WorkflowTemplateLookup, WorkflowTemplateRuntimeLookup {
 
     private final WorkflowDefinitionJpaRepository workflowDefinitionJpaRepository;
     private final WorkflowVersionJpaRepository workflowVersionJpaRepository;
@@ -189,6 +190,32 @@ public class WorkflowTemplateService implements WorkflowTemplateLookup {
             requestType.trim(),
             WorkflowVersionStatus.ACTIVE
         );
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Optional<WorkflowTemplateRuntimeVersion> findRuntimeWorkflowVersion(UUID workflowVersionId) {
+        if (workflowVersionId == null) {
+            return Optional.empty();
+        }
+
+        WorkflowVersionEntity version = workflowVersionJpaRepository.findById(workflowVersionId).orElse(null);
+        if (version == null) {
+            return Optional.empty();
+        }
+
+        WorkflowDefinitionEntity definition = workflowDefinitionJpaRepository
+            .findById(version.getWorkflowDefinitionId())
+            .orElse(null);
+        if (definition == null) {
+            return Optional.empty();
+        }
+
+        return Optional.of(new WorkflowTemplateRuntimeVersion(
+            version.getId(),
+            definition.getDefinitionKey(),
+            readGraph(version.getGraphJson())
+        ));
     }
 
     private void persistGraphStructure(UUID workflowVersionId, WorkflowGraphInput graph) {

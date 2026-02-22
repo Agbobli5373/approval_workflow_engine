@@ -16,6 +16,7 @@ import com.isaac.approvalworkflowengine.requests.repository.RequestStatusTransit
 import com.isaac.approvalworkflowengine.requests.repository.entity.IdempotencyKeyEntity;
 import com.isaac.approvalworkflowengine.requests.repository.entity.RequestEntity;
 import com.isaac.approvalworkflowengine.requests.repository.entity.RequestStatusTransitionEntity;
+import com.isaac.approvalworkflowengine.workflowruntime.service.WorkflowRuntimeService;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -58,6 +59,7 @@ public class RequestLifecycleService {
     private final RequestStatusTransitionJpaRepository requestStatusTransitionJpaRepository;
     private final IdempotencyKeyJpaRepository idempotencyKeyJpaRepository;
     private final RequestWorkflowVersionResolver requestWorkflowVersionResolver;
+    private final WorkflowRuntimeService workflowRuntimeService;
     private final ObjectMapper objectMapper;
 
     public RequestLifecycleService(
@@ -65,12 +67,14 @@ public class RequestLifecycleService {
         RequestStatusTransitionJpaRepository requestStatusTransitionJpaRepository,
         IdempotencyKeyJpaRepository idempotencyKeyJpaRepository,
         RequestWorkflowVersionResolver requestWorkflowVersionResolver,
+        WorkflowRuntimeService workflowRuntimeService,
         ObjectMapper objectMapper
     ) {
         this.requestJpaRepository = requestJpaRepository;
         this.requestStatusTransitionJpaRepository = requestStatusTransitionJpaRepository;
         this.idempotencyKeyJpaRepository = idempotencyKeyJpaRepository;
         this.requestWorkflowVersionResolver = requestWorkflowVersionResolver;
+        this.workflowRuntimeService = workflowRuntimeService;
         this.objectMapper = objectMapper;
     }
 
@@ -212,16 +216,20 @@ public class RequestLifecycleService {
                         "No active workflow version configured for request type " + request.getRequestType()
                     ));
                 request.setWorkflowVersionId(workflowVersionId);
+                requestJpaRepository.saveAndFlush(request);
             }
 
-            request.setStatus(RequestStatus.SUBMITTED);
+            WorkflowRuntimeService.RuntimeBootstrapResult runtimeResult = workflowRuntimeService
+                .startOrRestart(request.getId(), actor.subject());
+            RequestStatus targetStatus = RequestStatus.valueOf(runtimeResult.requestStatus().name());
+            request.setStatus(targetStatus);
             RequestEntity saved = requestJpaRepository.save(request);
 
             requestStatusTransitionJpaRepository.save(new RequestStatusTransitionEntity(
                 UUID.randomUUID(),
                 saved.getId(),
                 fromStatus,
-                RequestStatus.SUBMITTED,
+                targetStatus,
                 actor.subject(),
                 "SUBMIT",
                 Instant.now()
@@ -239,6 +247,10 @@ public class RequestLifecycleService {
 
             if (!fromStatus.isCancellable()) {
                 throw new IllegalStateException("Request cannot be cancelled in status " + fromStatus);
+            }
+
+            if (fromStatus == RequestStatus.IN_REVIEW) {
+                workflowRuntimeService.cancelActiveRuntime(request.getId());
             }
 
             request.setStatus(RequestStatus.CANCELLED);

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.isaac.approvalworkflowengine.rules.RuleSetLookup;
+import com.isaac.approvalworkflowengine.rules.RuleSetRuntimeEvaluator;
 import com.isaac.approvalworkflowengine.rules.api.PagedRuleSetVersionResource;
 import com.isaac.approvalworkflowengine.rules.api.RuleEvaluationContextInput;
 import com.isaac.approvalworkflowengine.rules.api.RuleEvaluationTraceResource;
@@ -39,7 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
-public class RuleSetService implements RuleSetLookup {
+public class RuleSetService implements RuleSetLookup, RuleSetRuntimeEvaluator {
 
     private static final Logger log = LoggerFactory.getLogger(RuleSetService.class);
 
@@ -192,6 +193,15 @@ public class RuleSetService implements RuleSetLookup {
         }
 
         return ruleSetJpaRepository.existsByRuleSetKeyAndVersionNo(normalizeUpper(ruleSetKey), versionNo);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public boolean matches(String ruleSetKey, int versionNo, RuleEvaluationContext context) {
+        RuleSetEntity entity = findByRuleSetKeyAndVersionNo(ruleSetKey, versionNo);
+        JsonNode dsl = readJsonNode(entity.getDslJson());
+        var expression = ruleDslParser.parse(dsl);
+        return ruleEvaluator.evaluate(expression, context).matched();
     }
 
     private RuleSetEntity findByRuleSetKeyAndVersionNo(String ruleSetKey, int versionNo) {

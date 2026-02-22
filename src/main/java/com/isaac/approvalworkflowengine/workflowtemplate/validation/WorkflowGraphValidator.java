@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Component;
@@ -93,7 +94,7 @@ public class WorkflowGraphValidator {
                 throw new IllegalStateException("Non-terminal nodes must have at least one outgoing edge");
             }
 
-            validateNodeConfiguration(node, incoming.get(nodeId).size());
+            validateNodeConfiguration(node, incoming.get(nodeId).size(), outgoing.get(nodeId).size(), edgesFrom(nodeId, edges));
         }
 
         Set<String> reachableFromStart = traverse(startNodeId, outgoing);
@@ -111,13 +112,19 @@ public class WorkflowGraphValidator {
         }
     }
 
-    private void validateNodeConfiguration(WorkflowNodeInput node, int incomingEdges) {
+    private void validateNodeConfiguration(
+        WorkflowNodeInput node,
+        int incomingEdges,
+        int outgoingEdges,
+        List<WorkflowEdgeInput> outgoingEdgeInputs
+    ) {
         if (node.type() == WorkflowNodeType.APPROVAL) {
             validateAssignment(node.assignment());
         }
 
         if (node.type() == WorkflowNodeType.GATEWAY) {
             validateRuleRef(node.ruleRef());
+            validateGatewayBranches(node.id(), outgoingEdges, outgoingEdgeInputs);
         }
 
         if (node.type() == WorkflowNodeType.JOIN) {
@@ -160,6 +167,74 @@ public class WorkflowGraphValidator {
                 throw new IllegalStateException("JOIN quorum must be between 1 and incoming edge count");
             }
         }
+    }
+
+    private void validateGatewayBranches(String nodeId, int outgoingEdges, List<WorkflowEdgeInput> outgoingEdgeInputs) {
+        if (outgoingEdges != 2) {
+            throw new IllegalStateException("GATEWAY node must have exactly two outgoing edges: " + nodeId);
+        }
+
+        Boolean trueBranchSeen = null;
+        Boolean falseBranchSeen = null;
+
+        for (WorkflowEdgeInput edge : outgoingEdgeInputs) {
+            Boolean branch = extractBranch(edge);
+            if (branch == null) {
+                throw new IllegalStateException(
+                    "GATEWAY outgoing edges must define condition.branch as boolean for node " + nodeId
+                );
+            }
+
+            if (branch) {
+                if (Boolean.TRUE.equals(trueBranchSeen)) {
+                    throw new IllegalStateException("GATEWAY node cannot have duplicate true branch: " + nodeId);
+                }
+                trueBranchSeen = true;
+            } else {
+                if (Boolean.TRUE.equals(falseBranchSeen)) {
+                    throw new IllegalStateException("GATEWAY node cannot have duplicate false branch: " + nodeId);
+                }
+                falseBranchSeen = true;
+            }
+        }
+
+        if (!Boolean.TRUE.equals(trueBranchSeen) || !Boolean.TRUE.equals(falseBranchSeen)) {
+            throw new IllegalStateException("GATEWAY node must provide one true and one false branch: " + nodeId);
+        }
+    }
+
+    private Boolean extractBranch(WorkflowEdgeInput edge) {
+        Map<String, Object> condition = edge.condition();
+        if (condition == null || condition.isEmpty()) {
+            return null;
+        }
+
+        Object raw = condition.get("branch");
+        if (raw == null) {
+            return null;
+        }
+
+        if (raw instanceof Boolean booleanValue) {
+            return booleanValue;
+        }
+
+        if (raw instanceof String stringValue && StringUtils.hasText(stringValue)) {
+            String normalized = stringValue.trim().toLowerCase(Locale.ROOT);
+            if ("true".equals(normalized)) {
+                return true;
+            }
+            if ("false".equals(normalized)) {
+                return false;
+            }
+        }
+
+        return null;
+    }
+
+    private List<WorkflowEdgeInput> edgesFrom(String nodeId, List<WorkflowEdgeInput> edges) {
+        return edges.stream()
+            .filter(edge -> normalizeKey(edge.from()).equals(nodeId))
+            .toList();
     }
 
     private Set<String> traverse(String start, Map<String, List<String>> graph) {
