@@ -29,7 +29,15 @@ class MigrationSmokeTest {
     }
 
     @Test
-    void h2FlywayMigrationCreatesPlatformAuthAndRequestTables() {
+    void postgresqlWorkflowTemplateMigrationsExist() {
+        assertThat(new ClassPathResource("db/migration/postgresql/V4__workflow_definitions_and_versions.sql").exists())
+            .isTrue();
+        assertThat(new ClassPathResource("db/migration/postgresql/V5__workflow_graph_nodes_edges.sql").exists())
+            .isTrue();
+    }
+
+    @Test
+    void h2FlywayMigrationCreatesPlatformAuthRequestAndWorkflowTemplateTables() {
         Integer tableCount = jdbcTemplate.queryForObject(
             """
             select count(*)
@@ -44,13 +52,17 @@ class MigrationSmokeTest {
                 'USER_ROLES',
                 'AUTH_TOKEN_REVOCATIONS',
                 'REQUESTS',
-                'REQUEST_STATUS_TRANSITIONS'
+                'REQUEST_STATUS_TRANSITIONS',
+                'WORKFLOW_DEFINITIONS',
+                'WORKFLOW_VERSIONS',
+                'WORKFLOW_NODES',
+                'WORKFLOW_EDGES'
             )
             """,
             Integer.class
         );
 
-        assertThat(tableCount).isEqualTo(8);
+        assertThat(tableCount).isEqualTo(12);
     }
 
     @Test
@@ -61,5 +73,26 @@ class MigrationSmokeTest {
         );
 
         assertThat(userCount).isEqualTo(3);
+    }
+
+    @Test
+    void localTestSeedActiveExpenseWorkflowTemplateIsPresent() {
+        Integer definitionCount = jdbcTemplate.queryForObject(
+            "select count(*) from workflow_definitions where definition_key = 'EXPENSE_DEFAULT' and request_type = 'EXPENSE'",
+            Integer.class
+        );
+
+        Integer activeVersionCount = jdbcTemplate.queryForObject(
+            """
+            select count(*)
+            from workflow_versions
+            where workflow_definition_id = '11111111-0000-0000-0000-000000000001'
+              and status = 'ACTIVE'
+            """,
+            Integer.class
+        );
+
+        assertThat(definitionCount).isEqualTo(1);
+        assertThat(activeVersionCount).isEqualTo(1);
     }
 }

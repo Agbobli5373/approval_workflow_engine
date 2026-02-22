@@ -41,6 +41,17 @@ This plan defines baseline schema objects and migration order for the Approval W
 - E2 applies `V3__requests_lifecycle.sql` in both PostgreSQL and H2 migration tracks.
 - Lifecycle transition history is persisted in `request_status_transitions`.
 
+## E3 Implementation Note
+
+- E3 applies:
+  - `V4__workflow_definitions_and_versions.sql`
+  - `V5__workflow_graph_nodes_edges.sql`
+  in both PostgreSQL and H2 migration tracks.
+- Local/test profiles also run repeatable template seed scripts under:
+  - `db/seed/localtest/postgresql/`
+  - `db/seed/localtest/h2/`
+- Request workflow binding now resolves from DB active workflow versions by `request_type` (no property-based resolver).
+
 ## Core Tables
 
 ### `users`
@@ -83,8 +94,9 @@ Indexes:
 - `id uuid pk`
 - `definition_key varchar(100) not null unique`
 - `name varchar(150) not null`
-- `request_type varchar(80) not null`
+- `request_type varchar(80) not null unique` (1:1 request type mapping)
 - `owner_user_id uuid not null`
+- `allow_loopback boolean not null default false`
 - timestamps
 
 ### `workflow_versions`

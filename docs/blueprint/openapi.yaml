@@ -781,24 +781,24 @@ components:
         definitionKey: { type: string, maxLength: 100 }
         name: { type: string, maxLength: 150 }
         requestType: { type: string, maxLength: 80 }
+        allowLoopback: { type: boolean, default: false }
 
     WorkflowDefinitionResource:
       type: object
-      required: [id, definitionKey, name, requestType]
+      required: [id, definitionKey, name, requestType, allowLoopback]
       properties:
         id: { type: string, format: uuid }
         definitionKey: { type: string }
         name: { type: string }
         requestType: { type: string }
+        allowLoopback: { type: boolean }
 
     WorkflowVersionInput:
       type: object
       required: [graph]
       properties:
         graph:
-          type: object
-          additionalProperties: true
-          description: Canonical graph JSON with nodes and edges.
+          $ref: '#/components/schemas/WorkflowGraph'
 
     WorkflowVersionResource:
       type: object
@@ -809,10 +809,86 @@ components:
         versionNo: { type: integer }
         status: { $ref: '#/components/schemas/WorkflowVersionStatus' }
         graph:
-          type: object
-          additionalProperties: true
+          $ref: '#/components/schemas/WorkflowGraph'
         checksumSha256: { type: string, nullable: true }
         activatedAt: { type: string, format: date-time, nullable: true }
+
+    WorkflowGraph:
+      type: object
+      required: [nodes, edges]
+      properties:
+        nodes:
+          type: array
+          minItems: 2
+          items: { $ref: '#/components/schemas/WorkflowNode' }
+        edges:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/WorkflowEdge' }
+        policies:
+          type: object
+          additionalProperties: true
+
+    WorkflowNode:
+      type: object
+      required: [id, type]
+      properties:
+        id: { type: string, minLength: 1, maxLength: 80 }
+        type: { $ref: '#/components/schemas/WorkflowNodeType' }
+        assignment: { $ref: '#/components/schemas/WorkflowAssignment' }
+        ruleRef: { $ref: '#/components/schemas/WorkflowRuleRef' }
+        join: { $ref: '#/components/schemas/WorkflowJoin' }
+        sla: { $ref: '#/components/schemas/WorkflowSla' }
+
+    WorkflowEdge:
+      type: object
+      required: [from, to]
+      properties:
+        from: { type: string, minLength: 1, maxLength: 80 }
+        to: { type: string, minLength: 1, maxLength: 80 }
+        condition:
+          type: object
+          additionalProperties: true
+
+    WorkflowAssignment:
+      type: object
+      required: [strategy]
+      properties:
+        strategy: { $ref: '#/components/schemas/WorkflowAssignmentStrategy' }
+        role: { type: string }
+        userId: { type: string }
+        expression: { type: string }
+
+    WorkflowRuleRef:
+      type: object
+      required: [ruleSetKey, version]
+      properties:
+        ruleSetKey: { type: string, minLength: 1, maxLength: 100 }
+        version: { type: integer, minimum: 0 }
+
+    WorkflowJoin:
+      type: object
+      required: [policy]
+      properties:
+        policy: { $ref: '#/components/schemas/WorkflowJoinPolicy' }
+        quorum: { type: integer, minimum: 1 }
+
+    WorkflowSla:
+      type: object
+      properties:
+        dueInHours: { type: integer, minimum: 1 }
+
+    WorkflowNodeType:
+      type: string
+      enum: [START, APPROVAL, GATEWAY, JOIN, END]
+
+    WorkflowAssignmentStrategy:
+      type: string
+      enum: [ROLE, USER, RULE]
+
+    WorkflowJoinPolicy:
+      type: string
+      enum: [ALL, ANY, QUORUM]
 
     AuditEventResource:
       type: object

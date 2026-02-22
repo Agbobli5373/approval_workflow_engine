@@ -152,6 +152,20 @@ class RequestLifecycleApiTest {
             .andExpect(jsonPath("$.page.totalElements").value(4));
     }
 
+    @Test
+    void submitFailsWhenNoActiveWorkflowExistsForRequestType() throws Exception {
+        String requestorToken = loginAndExtractToken("requestor");
+        JsonNode created = createRequest(requestorToken, "TRAVEL", "No active workflow");
+        String requestId = created.get("id").asText();
+
+        mockMvc.perform(post("/api/requests/" + requestId + "/submit")
+                .header("Authorization", "Bearer " + requestorToken)
+                .header("Idempotency-Key", "travel-submit-12345"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("CONFLICT"))
+            .andExpect(jsonPath("$.message").value("No active workflow version configured for request type TRAVEL"));
+    }
+
     private JsonNode createRequest(String token, String requestType, String title) throws Exception {
         String payload = """
             {

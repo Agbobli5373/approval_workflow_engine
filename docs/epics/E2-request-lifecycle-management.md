@@ -30,7 +30,7 @@ Implement the request lifecycle with strict state transitions, ownership rules, 
   - edit only in `DRAFT` and `CHANGES_REQUESTED`
   - submit only in `DRAFT` and `CHANGES_REQUESTED`
   - cancel only in `DRAFT`, `SUBMITTED`, `IN_REVIEW`, `CHANGES_REQUESTED`
-- Workflow version binding on submit via property-backed resolver (`app.requests.active-workflow-versions`).
+- Workflow version binding on submit via DB-backed resolver of active workflow versions by request type.
 - Idempotent submit and cancel using foundational `idempotency_keys`.
 - Request transition history persistence in `request_status_transitions`.
 
@@ -46,8 +46,8 @@ Implement the request lifecycle with strict state transitions, ownership rules, 
   - `src/main/java/com/isaac/approvalworkflowengine/requests/repository/entity/RequestStatusTransitionEntity.java`
   - `src/main/java/com/isaac/approvalworkflowengine/requests/repository/entity/IdempotencyKeyEntity.java`
 - Workflow binding support:
-  - `src/main/java/com/isaac/approvalworkflowengine/requests/service/RequestWorkflowBindingProperties.java`
-  - `src/main/java/com/isaac/approvalworkflowengine/requests/service/PropertyBackedRequestWorkflowVersionResolver.java`
+  - `src/main/java/com/isaac/approvalworkflowengine/requests/service/RequestWorkflowVersionResolver.java`
+  - `src/main/java/com/isaac/approvalworkflowengine/requests/service/DatabaseBackedRequestWorkflowVersionResolver.java`
 - Error handling additions used by E2:
   - `src/main/java/com/isaac/approvalworkflowengine/shared/api/GlobalExceptionHandler.java`
 
