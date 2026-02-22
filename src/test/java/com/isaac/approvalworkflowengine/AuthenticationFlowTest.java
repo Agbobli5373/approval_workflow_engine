@@ -43,7 +43,7 @@ class AuthenticationFlowTest {
 
     @Test
     void validLoginReturnsBearerToken() throws Exception {
-        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginPayload("admin", "password")))
             .andExpect(status().isOk())
@@ -54,7 +54,7 @@ class AuthenticationFlowTest {
         String token = extractToken(result);
         assertThat(token).isNotBlank();
 
-        mockMvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.username").value("admin"))
             .andExpect(jsonPath("$.roles[0]").value("WORKFLOW_ADMIN"));
@@ -62,7 +62,7 @@ class AuthenticationFlowTest {
 
     @Test
     void invalidPasswordReturnsUnauthorized() throws Exception {
-        mockMvc.perform(post("/api/v1/auth/login")
+        mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginPayload("admin", "wrong-password")))
             .andExpect(status().isUnauthorized())
@@ -87,7 +87,7 @@ class AuthenticationFlowTest {
             false
         );
 
-        mockMvc.perform(post("/api/v1/auth/login")
+        mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginPayload("inactive-user", "password")))
             .andExpect(status().isUnauthorized())
@@ -104,26 +104,26 @@ class AuthenticationFlowTest {
     void logoutRevokesAccessToken() throws Exception {
         String requestorToken = loginAndExtractToken("requestor", "password");
 
-        mockMvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + requestorToken))
+        mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + requestorToken))
             .andExpect(status().isOk());
 
-        mockMvc.perform(post("/api/v1/auth/logout").header("Authorization", "Bearer " + requestorToken))
+        mockMvc.perform(post("/api/auth/logout").header("Authorization", "Bearer " + requestorToken))
             .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + requestorToken))
+        mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + requestorToken))
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
     void unauthorizedResponsesCarryCorrelationId() throws Exception {
-        mockMvc.perform(get("/api/v1/auth/me"))
+        mockMvc.perform(get("/api/auth/me"))
             .andExpect(status().isUnauthorized())
             .andExpect(header().exists("X-Correlation-Id"));
     }
 
     private String loginAndExtractToken(String usernameOrEmail, String password) throws Exception {
-        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginPayload(usernameOrEmail, password)))
             .andExpect(status().isOk())

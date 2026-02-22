@@ -29,13 +29,13 @@ class RateLimitingFilterTest {
     void requestsAboveConfiguredWindowLimitReceive429() throws Exception {
         String body = "{\"usernameOrEmail\":\"admin\",\"password\":\"wrong\"}";
 
-        mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isTooManyRequests())
             .andExpect(jsonPath("$.code").value("RATE_LIMITED"))
             .andExpect(header().exists("Retry-After"));
