@@ -1,0 +1,32 @@
+{
+  "graph": {
+    "nodes": [
+      {
+        "id": "start",
+        "type": "START"
+      },
+      {
+        "id": "gateway_amount",
+        "type": "GATEWAY",
+        "ruleRef": {
+          "ruleSetKey": "MISSING_RULESET",
+          "version": 99
+        }
+      },
+      {
+        "id": "end",
+        "type": "END"
+      }
+    ],
+    "edges": [
+      {
+        "from": "start",
+        "to": "gateway_amount"
+      },
+      {
+        "from": "gateway_amount",
+        "to": "end"
+      }
+    ]
+  }
+}

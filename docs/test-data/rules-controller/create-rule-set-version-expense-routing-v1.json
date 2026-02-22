@@ -1,0 +1,25 @@
+{
+  "dsl": {
+    "all": [
+      {
+        "field": "amount",
+        "op": ">=",
+        "value": 1000
+      },
+      {
+        "any": [
+          {
+            "field": "department",
+            "op": "==",
+            "value": "Finance"
+          },
+          {
+            "field": "payload.costCenter",
+            "op": "in",
+            "value": ["CC-100", "CC-200"]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -37,7 +37,19 @@ class MigrationSmokeTest {
     }
 
     @Test
-    void h2FlywayMigrationCreatesPlatformAuthRequestAndWorkflowTemplateTables() {
+    void postgresqlRulesMigrationExists() {
+        assertThat(new ClassPathResource("db/migration/postgresql/V6__rulesets.sql").exists())
+            .isTrue();
+    }
+
+    @Test
+    void h2RulesMigrationExists() {
+        assertThat(new ClassPathResource("db/migration/h2/V6__rulesets.sql").exists())
+            .isTrue();
+    }
+
+    @Test
+    void h2FlywayMigrationCreatesPlatformAuthRequestWorkflowTemplateAndRulesTables() {
         Integer tableCount = jdbcTemplate.queryForObject(
             """
             select count(*)
@@ -56,13 +68,14 @@ class MigrationSmokeTest {
                 'WORKFLOW_DEFINITIONS',
                 'WORKFLOW_VERSIONS',
                 'WORKFLOW_NODES',
-                'WORKFLOW_EDGES'
+                'WORKFLOW_EDGES',
+                'RULE_SETS'
             )
             """,
             Integer.class
         );
 
-        assertThat(tableCount).isEqualTo(12);
+        assertThat(tableCount).isEqualTo(13);
     }
 
     @Test

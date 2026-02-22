@@ -52,6 +52,13 @@ This plan defines baseline schema objects and migration order for the Approval W
   - `db/seed/localtest/h2/`
 - Request workflow binding now resolves from DB active workflow versions by `request_type` (no property-based resolver).
 
+## E4 Implementation Note
+
+- E4 applies `V6__rulesets.sql` in both PostgreSQL and H2 migration tracks.
+- Rulesets are versioned and immutable via unique key:
+  - `(rule_set_key, version_no)`.
+- Workflow template activation now enforces gateway `ruleRef` existence/version checks against `rule_sets`.
+
 ## Core Tables
 
 ### `users`
@@ -151,7 +158,13 @@ Indexes:
 - `version_no int not null`
 - `dsl_json jsonb not null`
 - `checksum_sha256 char(64) not null`
+- `created_by_user_id uuid not null`
+- `created_at timestamptz not null`
 - unique `(rule_set_key, version_no)`
+
+Indexes:
+
+- `idx_rule_sets_key_version_desc` on `(rule_set_key, version_no desc)`
 
 ## Request Tables
 

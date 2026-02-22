@@ -1,0 +1,23 @@
+{
+  "dsl": {
+    "all": [
+      {
+        "field": "amount",
+        "op": ">",
+        "value": 2500
+      },
+      {
+        "not": {
+          "field": "payload.urgent",
+          "op": "==",
+          "value": true
+        }
+      },
+      {
+        "field": "payload.code",
+        "op": "matches",
+        "value": "EXP-[0-9]{4}"
+      }
+    ]
+  }
+}

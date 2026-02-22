@@ -1,0 +1,16 @@
+{
+  "ruleSetKey": "EXPENSE_ROUTING",
+  "versionNo": 1,
+  "context": {
+    "amount": 3200,
+    "department": "Finance",
+    "requestType": "EXPENSE",
+    "currency": "USD",
+    "payload": {
+      "costCenter": "CC-100",
+      "code": "EXP-2026",
+      "urgent": false,
+      "requestorLevel": "L3"
+    }
+  }
+}

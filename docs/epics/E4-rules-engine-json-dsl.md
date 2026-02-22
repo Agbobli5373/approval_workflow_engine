@@ -2,45 +2,74 @@
 
 ## Epic Goal
 
-Provide deterministic, versioned rule evaluation for routing and gateway conditions across workflow templates and runtime execution.
+Provide deterministic, versioned rule evaluation for routing and gateway conditions, with admin APIs and activation-time `ruleRef` enforcement.
 
-## Features To Implement
+## Implemented Features
 
-- JSON DSL schema for conditions.
-- Operators support:
-  - combinators: `all`, `any`, `not`
-  - comparisons: `==`, `!=`, `>`, `>=`, `<`, `<=`, `in`, `contains`, `matches`
-- Request-context field resolution (`amount`, `department`, `requestType`, payload fields).
-- Rule versioning with reproducible evaluation.
-- Explain/debug mode for rule simulation results (internal/admin use).
+- DB-backed ruleset versioning (`rule_sets`) with immutable versions.
+- JSON DSL parser and validator using explicit AST node shapes:
+  - logical: `all`, `any`, `not`
+  - predicate: `field`, `op`, `value`
+- Supported operators:
+  - `==`, `!=`, `>`, `>=`, `<`, `<=`, `in`, `contains`, `matches`
+- Deterministic evaluation semantics over request context fields:
+  - `amount`, `department`, `requestType`, `currency`, `payload.*`
+- Regex safety guardrails for `matches`:
+  - max pattern length
+  - max input length
+  - reject lookbehind and backreference constructs
+- Ruleset checksum on canonical DSL JSON (`SHA-256`).
+- Admin APIs under `/api`:
+  - `POST /api/rule-sets/{ruleSetKey}/versions`
+  - `GET /api/rule-sets/{ruleSetKey}/versions/{versionNo}`
+  - `GET /api/rule-sets/{ruleSetKey}/versions`
+  - `POST /api/rule-sets/simulations`
+- Workflow-template integration:
+  - activation now verifies each `GATEWAY.ruleRef` references an existing ruleset key/version.
 
-## Detailed Implementation Guide
+## Implementation Artifacts
 
-1. Define DSL JSON schema and validation rules (required keys, type contracts, supported operators).
-2. Implement parser that converts DSL JSON into a safe internal AST.
-3. Implement evaluator with strict deterministic semantics:
-   - fixed operator precedence
-   - stable list ordering
-   - no side effects
-4. Implement field accessor strategy for request context and nested payload paths.
-5. Add regex safety guardrails for `matches` to prevent pathological patterns.
-6. Implement rule version storage and version references from workflow templates.
-7. Add simulation service to test rule outcomes against sample context data.
-8. Add tests:
-   - operator correctness
-   - null/missing field behavior
-   - deterministic re-evaluation with same inputs
+- Migrations:
+  - `src/main/resources/db/migration/postgresql/V6__rulesets.sql`
+  - `src/main/resources/db/migration/h2/V6__rulesets.sql`
+- Rules API/service:
+  - `src/main/java/com/isaac/approvalworkflowengine/rules/api/RuleSetController.java`
+  - `src/main/java/com/isaac/approvalworkflowengine/rules/service/RuleSetService.java`
+  - `src/main/java/com/isaac/approvalworkflowengine/rules/RuleSetLookup.java`
+- DSL and evaluation:
+  - `src/main/java/com/isaac/approvalworkflowengine/rules/dsl/RuleDslParser.java`
+  - `src/main/java/com/isaac/approvalworkflowengine/rules/evaluation/RuleEvaluator.java`
+  - `src/main/java/com/isaac/approvalworkflowengine/rules/evaluation/RuleFieldResolver.java`
+  - `src/main/java/com/isaac/approvalworkflowengine/rules/validation/RuleRegexGuard.java`
+  - `src/main/java/com/isaac/approvalworkflowengine/rules/checksum/RuleDslChecksumService.java`
+- Persistence:
+  - `src/main/java/com/isaac/approvalworkflowengine/rules/repository/entity/RuleSetEntity.java`
+  - `src/main/java/com/isaac/approvalworkflowengine/rules/repository/RuleSetJpaRepository.java`
+- Workflow activation integration:
+  - `src/main/java/com/isaac/approvalworkflowengine/workflowtemplate/service/WorkflowTemplateService.java`
 
-## Deliverables
+## Tests Added/Updated
 
-- Rules DSL parser/evaluator library.
-- Rule version persistence and lookup.
-- Rule simulation endpoint/service for admins.
+- Rules unit tests:
+  - `src/test/java/com/isaac/approvalworkflowengine/rules/RuleDslParserTest.java`
+  - `src/test/java/com/isaac/approvalworkflowengine/rules/RuleEvaluatorTest.java`
+- Rules API integration tests:
+  - `src/test/java/com/isaac/approvalworkflowengine/rules/RuleSetApiTest.java`
+- Workflow template integration updates:
+  - `src/test/java/com/isaac/approvalworkflowengine/workflowtemplate/WorkflowTemplateApiTest.java`
+- Migration smoke updates:
+  - `src/test/java/com/isaac/approvalworkflowengine/platform/MigrationSmokeTest.java`
 
 ## Acceptance Criteria
 
-- All required operators evaluate correctly with test coverage.
-- Same rule version and same input produce identical output across runs.
-- Invalid DSL structures are rejected with clear validation errors.
-- Runtime workflow routing can call evaluator without unsafe reflection or dynamic code execution.
-- Rule evaluation failures are observable via logs/metrics and do not crash worker loops.
+- All required DSL operators evaluate correctly with tests.
+- Same rule version and same context produce deterministic output.
+- Invalid DSL is rejected with `400` and structured error details.
+- Gateway `ruleRef` to missing ruleset/version blocks workflow activation with conflict.
+- Rules APIs are admin-only and integrated into OpenAPI contract.
+
+## Deferred To Later Epics
+
+- Runtime gateway task execution wiring (E5).
+- Audit append/hash-chain coverage for rules events (E9).
+- Outbox/integration event publishing for rules lifecycle (E10).

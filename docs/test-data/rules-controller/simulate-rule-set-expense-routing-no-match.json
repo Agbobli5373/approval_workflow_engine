@@ -1,0 +1,16 @@
+{
+  "ruleSetKey": "EXPENSE_ROUTING",
+  "versionNo": 1,
+  "context": {
+    "amount": 500,
+    "department": "Engineering",
+    "requestType": "EXPENSE",
+    "currency": "USD",
+    "payload": {
+      "costCenter": "CC-999",
+      "code": "EXP-2026",
+      "urgent": false,
+      "requestorLevel": "L1"
+    }
+  }
+}

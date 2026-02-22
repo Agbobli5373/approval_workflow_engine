@@ -12,6 +12,7 @@ tags:
   - name: Requests
   - name: Tasks
   - name: Workflows
+  - name: Rules
   - name: Audit
   - name: Webhooks
 paths:
@@ -415,6 +416,109 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /rule-sets/{ruleSetKey}/versions:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
+    post:
+      tags: [Rules]
+      operationId: createRuleSetVersion
+      summary: Create immutable ruleset version
+      parameters:
+        - $ref: '#/components/parameters/RuleSetKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RuleSetVersionInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleSetVersionResource'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    get:
+      tags: [Rules]
+      operationId: listRuleSetVersions
+      summary: List versions for ruleset key
+      parameters:
+        - $ref: '#/components/parameters/RuleSetKey'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Rule set versions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedRuleSetVersionResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /rule-sets/{ruleSetKey}/versions/{versionNo}:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
+    get:
+      tags: [Rules]
+      operationId: getRuleSetVersion
+      summary: Get specific ruleset version
+      parameters:
+        - $ref: '#/components/parameters/RuleSetKey'
+        - $ref: '#/components/parameters/RuleVersionNo'
+      responses:
+        '200':
+          description: Rule set version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleSetVersionResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /rule-sets/simulations:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
+    post:
+      tags: [Rules]
+      operationId: simulateRuleSetVersion
+      summary: Simulate ruleset evaluation against request context
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RuleSimulationRequest'
+      responses:
+        '200':
+          description: Simulation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleSimulationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /requests/{requestId}/audit:
     parameters:
       - $ref: '#/components/parameters/ApiVersion'
@@ -520,6 +624,18 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 1, maxLength: 100 }
+    RuleSetKey:
+      name: ruleSetKey
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 100 }
+    RuleVersionNo:
+      name: versionNo
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
     IdempotencyKey:
       name: Idempotency-Key
       in: header
@@ -864,7 +980,7 @@ components:
       required: [ruleSetKey, version]
       properties:
         ruleSetKey: { type: string, minLength: 1, maxLength: 100 }
-        version: { type: integer, minimum: 0 }
+        version: { type: integer, minimum: 1 }
 
     WorkflowJoin:
       type: object
@@ -889,6 +1005,109 @@ components:
     WorkflowJoinPolicy:
       type: string
       enum: [ALL, ANY, QUORUM]
+
+    RuleSetVersionInput:
+      type: object
+      required: [dsl]
+      properties:
+        dsl:
+          $ref: '#/components/schemas/RuleExpression'
+
+    RuleSetVersionResource:
+      type: object
+      required: [id, ruleSetKey, versionNo, dsl, checksumSha256, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        ruleSetKey: { type: string }
+        versionNo: { type: integer, minimum: 1 }
+        dsl:
+          $ref: '#/components/schemas/RuleExpression'
+        checksumSha256: { type: string, minLength: 64, maxLength: 64 }
+        createdAt: { type: string, format: date-time }
+
+    RuleSimulationRequest:
+      type: object
+      required: [ruleSetKey, versionNo, context]
+      properties:
+        ruleSetKey: { type: string, minLength: 1, maxLength: 100 }
+        versionNo: { type: integer, minimum: 1 }
+        context:
+          $ref: '#/components/schemas/RuleEvaluationContext'
+
+    RuleSimulationResponse:
+      type: object
+      required: [ruleSetKey, versionNo, matched, traces]
+      properties:
+        ruleSetKey: { type: string }
+        versionNo: { type: integer, minimum: 1 }
+        matched: { type: boolean }
+        traces:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleEvaluationTrace'
+
+    RuleEvaluationContext:
+      type: object
+      properties:
+        amount: { type: number }
+        department: { type: string }
+        requestType: { type: string }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        payload:
+          type: object
+          additionalProperties: true
+
+    RuleEvaluationTrace:
+      type: object
+      required: [path, expressionType, result]
+      properties:
+        path: { type: string }
+        expressionType: { type: string }
+        result: { type: boolean }
+        field: { type: string, nullable: true }
+        operator: { type: string, nullable: true }
+        fieldValue: { nullable: true }
+        expectedValue: { nullable: true }
+        reason: { type: string, nullable: true }
+
+    RuleExpression:
+      oneOf:
+        - type: object
+          required: [all]
+          properties:
+            all:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/RuleExpression'
+          additionalProperties: false
+        - type: object
+          required: [any]
+          properties:
+            any:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/RuleExpression'
+          additionalProperties: false
+        - type: object
+          required: [not]
+          properties:
+            not:
+              $ref: '#/components/schemas/RuleExpression'
+          additionalProperties: false
+        - type: object
+          required: [field, op, value]
+          properties:
+            field: { type: string, minLength: 1, maxLength: 200 }
+            op:
+              $ref: '#/components/schemas/RuleOperatorToken'
+            value: {}
+          additionalProperties: false
+
+    RuleOperatorToken:
+      type: string
+      enum: ['==', '!=', '>', '>=', '<', '<=', 'in', 'contains', 'matches']
 
     AuditEventResource:
       type: object
@@ -956,6 +1175,16 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/TaskResource' }
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+
+    PagedRuleSetVersionResource:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/RuleSetVersionResource' }
         page:
           $ref: '#/components/schemas/PageMetadata'
 

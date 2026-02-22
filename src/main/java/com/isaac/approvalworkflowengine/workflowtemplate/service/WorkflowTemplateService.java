@@ -13,8 +13,10 @@ import com.isaac.approvalworkflowengine.workflowtemplate.api.WorkflowRuleRefInpu
 import com.isaac.approvalworkflowengine.workflowtemplate.api.WorkflowSlaInput;
 import com.isaac.approvalworkflowengine.workflowtemplate.api.WorkflowVersionInput;
 import com.isaac.approvalworkflowengine.workflowtemplate.api.WorkflowVersionResource;
+import com.isaac.approvalworkflowengine.workflowtemplate.model.WorkflowNodeType;
 import com.isaac.approvalworkflowengine.workflowtemplate.checksum.WorkflowGraphChecksumService;
 import com.isaac.approvalworkflowengine.workflowtemplate.model.WorkflowVersionStatus;
+import com.isaac.approvalworkflowengine.rules.RuleSetLookup;
 import com.isaac.approvalworkflowengine.workflowtemplate.WorkflowTemplateLookup;
 import com.isaac.approvalworkflowengine.workflowtemplate.repository.WorkflowDefinitionJpaRepository;
 import com.isaac.approvalworkflowengine.workflowtemplate.repository.WorkflowEdgeJpaRepository;
@@ -47,6 +49,7 @@ public class WorkflowTemplateService implements WorkflowTemplateLookup {
     private final WorkflowEdgeJpaRepository workflowEdgeJpaRepository;
     private final WorkflowGraphValidator workflowGraphValidator;
     private final WorkflowGraphChecksumService workflowGraphChecksumService;
+    private final RuleSetLookup ruleSetLookup;
     private final ObjectMapper objectMapper;
 
     public WorkflowTemplateService(
@@ -56,6 +59,7 @@ public class WorkflowTemplateService implements WorkflowTemplateLookup {
         WorkflowEdgeJpaRepository workflowEdgeJpaRepository,
         WorkflowGraphValidator workflowGraphValidator,
         WorkflowGraphChecksumService workflowGraphChecksumService,
+        RuleSetLookup ruleSetLookup,
         ObjectMapper objectMapper
     ) {
         this.workflowDefinitionJpaRepository = workflowDefinitionJpaRepository;
@@ -64,6 +68,7 @@ public class WorkflowTemplateService implements WorkflowTemplateLookup {
         this.workflowEdgeJpaRepository = workflowEdgeJpaRepository;
         this.workflowGraphValidator = workflowGraphValidator;
         this.workflowGraphChecksumService = workflowGraphChecksumService;
+        this.ruleSetLookup = ruleSetLookup;
         this.objectMapper = objectMapper;
     }
 
@@ -137,6 +142,7 @@ public class WorkflowTemplateService implements WorkflowTemplateLookup {
 
         WorkflowGraphInput graph = readGraph(targetVersion.getGraphJson());
         workflowGraphValidator.validateForActivation(graph, definition.isAllowLoopback());
+        validateGatewayRuleReferences(graph);
 
         String canonicalGraphJson = workflowGraphChecksumService.canonicalize(graph);
         String checksum = workflowGraphChecksumService.checksumSha256(canonicalGraphJson);
@@ -313,5 +319,28 @@ public class WorkflowTemplateService implements WorkflowTemplateLookup {
             throw new IllegalStateException("Required value is missing");
         }
         return value.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private void validateGatewayRuleReferences(WorkflowGraphInput graph) {
+        for (WorkflowNodeInput node : graph.nodes()) {
+            if (node.type() != WorkflowNodeType.GATEWAY) {
+                continue;
+            }
+
+            WorkflowRuleRefInput ruleRef = node.ruleRef();
+            if (ruleRef == null) {
+                continue;
+            }
+
+            String ruleSetKey = normalizeUpper(ruleRef.ruleSetKey());
+            int version = ruleRef.version();
+            boolean exists = ruleSetLookup.exists(ruleSetKey, version);
+            if (!exists) {
+                throw new IllegalStateException(
+                    "Referenced rule set version not found for gateway node "
+                        + node.id() + ": " + ruleSetKey + " v" + version
+                );
+            }
+        }
     }
 }

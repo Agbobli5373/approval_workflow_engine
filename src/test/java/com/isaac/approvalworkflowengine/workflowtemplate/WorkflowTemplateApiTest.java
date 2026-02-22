@@ -190,6 +190,53 @@ class WorkflowTemplateApiTest {
     }
 
     @Test
+    void activationRejectsGatewayRuleRefWhenRuleSetVersionMissing() throws Exception {
+        String adminToken = loginAndExtractToken("admin", "password");
+        String suffix = uniqueSuffix();
+        String missingRuleSetKey = "MISSING_RULESET_" + suffix;
+        JsonNode version = createDefinitionAndVersion(
+            adminToken,
+            "WF_RULE_MISSING",
+            "REQ_RULE_MISSING",
+            gatewayRuleRefGraphJson(missingRuleSetKey, 1)
+        );
+
+        mockMvc.perform(post("/api/workflow-versions/" + version.get("id").asText() + "/activate")
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("CONFLICT"))
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Referenced rule set version not found")));
+    }
+
+    @Test
+    void activationSucceedsGatewayRuleRefWhenRuleSetVersionExists() throws Exception {
+        String adminToken = loginAndExtractToken("admin", "password");
+        String suffix = uniqueSuffix();
+        String ruleSetKey = "EXPENSE_ROUTE_" + suffix;
+
+        mockMvc.perform(post("/api/rule-sets/" + ruleSetKey + "/versions")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"dsl":{"field":"amount","op":">","value":1000}}
+                    """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.versionNo").value(1));
+
+        JsonNode version = createDefinitionAndVersion(
+            adminToken,
+            "WF_RULE_PRESENT",
+            "REQ_RULE_PRESENT",
+            gatewayRuleRefGraphJson(ruleSetKey, 1)
+        );
+
+        mockMvc.perform(post("/api/workflow-versions/" + version.get("id").asText() + "/activate")
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
     void activatingNewVersionAutoRetiresExistingActiveVersion() throws Exception {
         String adminToken = loginAndExtractToken("admin", "password");
         String suffix = uniqueSuffix();
@@ -427,5 +474,21 @@ class WorkflowTemplateApiTest {
               ]
             }
             """;
+    }
+
+    private String gatewayRuleRefGraphJson(String ruleSetKey, int version) {
+        return """
+            {
+              "nodes":[
+                {"id":"start","type":"START"},
+                {"id":"gate","type":"GATEWAY","ruleRef":{"ruleSetKey":"%s","version":%d}},
+                {"id":"end","type":"END"}
+              ],
+              "edges":[
+                {"from":"start","to":"gate"},
+                {"from":"gate","to":"end"}
+              ]
+            }
+            """.formatted(ruleSetKey, version);
     }
 }

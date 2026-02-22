@@ -1,0 +1,7 @@
+{
+  "dsl": {
+    "field": "amount",
+    "op": "between",
+    "value": 1000
+  }
+}

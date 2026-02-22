@@ -1,0 +1,44 @@
+{
+  "graph": {
+    "nodes": [
+      {
+        "id": "start",
+        "type": "START"
+      },
+      {
+        "id": "gateway_amount",
+        "type": "GATEWAY",
+        "ruleRef": {
+          "ruleSetKey": "EXPENSE_ROUTING",
+          "version": 1
+        }
+      },
+      {
+        "id": "manager_approval",
+        "type": "APPROVAL",
+        "assignment": {
+          "strategy": "ROLE",
+          "role": "MANAGER"
+        }
+      },
+      {
+        "id": "end",
+        "type": "END"
+      }
+    ],
+    "edges": [
+      {
+        "from": "start",
+        "to": "gateway_amount"
+      },
+      {
+        "from": "gateway_amount",
+        "to": "manager_approval"
+      },
+      {
+        "from": "manager_approval",
+        "to": "end"
+      }
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "dsl": {
+    "field": "payload.code",
+    "op": "matches",
+    "value": "(?<=EXP)\\d+"
+  }
+}

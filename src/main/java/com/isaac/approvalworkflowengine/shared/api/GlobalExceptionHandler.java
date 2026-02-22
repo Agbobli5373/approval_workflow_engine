@@ -1,6 +1,7 @@
 package com.isaac.approvalworkflowengine.shared.api;
 
 import com.isaac.approvalworkflowengine.shared.context.CorrelationIdContext;
+import com.isaac.approvalworkflowengine.shared.error.BadRequestException;
 import com.isaac.approvalworkflowengine.shared.error.DomainConflictException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -82,6 +83,20 @@ public class GlobalExceptionHandler {
             "BAD_REQUEST",
             "Request could not be processed",
             List.of(),
+            request
+        );
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ApiError> handleBadRequestException(
+        BadRequestException exception,
+        HttpServletRequest request
+    ) {
+        return buildResponse(
+            HttpStatus.BAD_REQUEST,
+            "BAD_REQUEST",
+            exception.getMessage(),
+            exception.details(),
             request
         );
     }
