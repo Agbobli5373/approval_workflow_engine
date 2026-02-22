@@ -1,4 +1,4 @@
-package com.isaac.approvalworkflowengine;
+package com.isaac.approvalworkflowengine.shared;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;

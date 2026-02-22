@@ -1,5 +1,6 @@
-package com.isaac.approvalworkflowengine;
+package com.isaac.approvalworkflowengine.platform;
 
+import com.isaac.approvalworkflowengine.ApprovalWorkflowEngineApplication;
 import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModules;
 

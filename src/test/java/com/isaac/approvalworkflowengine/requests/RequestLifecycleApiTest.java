@@ -1,4 +1,4 @@
-package com.isaac.approvalworkflowengine;
+package com.isaac.approvalworkflowengine.requests;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -31,8 +31,8 @@ class RequestLifecycleApiTest {
 
     @Test
     void createAndReadOwnRequest() throws Exception {
-        String requestorToken = loginAndExtractToken("requestor", "password");
-        String approverToken = loginAndExtractToken("approver", "password");
+        String requestorToken = loginAndExtractToken("requestor");
+        String approverToken = loginAndExtractToken("approver");
 
         JsonNode created = createRequest(requestorToken, "EXPENSE", "Team lunch");
         String requestId = created.get("id").asText();
@@ -49,7 +49,7 @@ class RequestLifecycleApiTest {
 
     @Test
     void requestCanOnlyBeEditedInEditableStates() throws Exception {
-        String requestorToken = loginAndExtractToken("requestor", "password");
+        String requestorToken = loginAndExtractToken("requestor");
         JsonNode created = createRequest(requestorToken, "EXPENSE", "Hotel booking");
         String requestId = created.get("id").asText();
 
@@ -77,7 +77,7 @@ class RequestLifecycleApiTest {
 
     @Test
     void submitIsIdempotentPerKey() throws Exception {
-        String requestorToken = loginAndExtractToken("requestor", "password");
+        String requestorToken = loginAndExtractToken("requestor");
         JsonNode created = createRequest(requestorToken, "EXPENSE", "Conference ticket");
         String requestId = created.get("id").asText();
 
@@ -101,7 +101,7 @@ class RequestLifecycleApiTest {
 
     @Test
     void cancelIsIdempotentPerKey() throws Exception {
-        String requestorToken = loginAndExtractToken("requestor", "password");
+        String requestorToken = loginAndExtractToken("requestor");
         JsonNode created = createRequest(requestorToken, "EXPENSE", "Taxi reimbursement");
         String requestId = created.get("id").asText();
 
@@ -125,9 +125,9 @@ class RequestLifecycleApiTest {
 
     @Test
     void listSupportsPaginationFilteringAndOwnership() throws Exception {
-        String requestorToken = loginAndExtractToken("requestor", "password");
-        String approverToken = loginAndExtractToken("approver", "password");
-        String adminToken = loginAndExtractToken("admin", "password");
+        String requestorToken = loginAndExtractToken("requestor");
+        String approverToken = loginAndExtractToken("approver");
+        String adminToken = loginAndExtractToken("admin");
 
         createRequest(requestorToken, "EXPENSE", "Req-1");
         createRequest(requestorToken, "EXPENSE", "Req-2");
@@ -178,8 +178,8 @@ class RequestLifecycleApiTest {
         return created;
     }
 
-    private String loginAndExtractToken(String usernameOrEmail, String password) throws Exception {
-        String payload = "{\"usernameOrEmail\":\"" + usernameOrEmail + "\",\"password\":\"" + password + "\"}";
+    private String loginAndExtractToken(String usernameOrEmail) throws Exception {
+        String payload = "{\"usernameOrEmail\":\"" + usernameOrEmail + "\",\"password\":\"" + "password" + "\"}";
 
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)

@@ -1,4 +1,4 @@
-package com.isaac.approvalworkflowengine;
+package com.isaac.approvalworkflowengine.auth;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
