@@ -1,0 +1,29 @@
+{
+  "requestType": "EXPENSE",
+  "title": "Laptop Purchase - New Hire",
+  "description": "MacBook Pro for new engineering hire in March onboarding",
+  "payload": {
+    "employeeId": "EMP-REQ",
+    "vendor": "Acme Tech Supplies",
+    "businessJustification": "Development workstation",
+    "items": [
+      {
+        "sku": "MBP-14-M4",
+        "quantity": 1,
+        "unitPrice": 2450.00
+      }
+    ]
+  },
+  "amount": 2450.00,
+  "currency": "USD",
+  "department": "Finance",
+  "costCenter": "CC-100",
+  "attachments": [
+    {
+      "name": "quote.pdf",
+      "contentType": "application/pdf",
+      "sizeBytes": 104857,
+      "objectKey": "attachments/expense/quote-2026-001.pdf"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "definitionKey": "PROCUREMENT_STANDARD",
+  "name": "Procurement Standard Approval",
+  "requestType": "PROCUREMENT",
+  "allowLoopback": false
+}

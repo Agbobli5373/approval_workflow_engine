@@ -1,0 +1,32 @@
+{
+  "graph": {
+    "nodes": [
+      {
+        "id": "start",
+        "type": "START"
+      },
+      {
+        "id": "manager_approval",
+        "type": "APPROVAL",
+        "assignment": {
+          "strategy": "ROLE",
+          "role": "MANAGER"
+        }
+      },
+      {
+        "id": "end",
+        "type": "END"
+      }
+    ],
+    "edges": [
+      {
+        "from": "start",
+        "to": "manager_approval"
+      },
+      {
+        "from": "manager_approval",
+        "to": "node_does_not_exist"
+      }
+    ]
+  }
+}

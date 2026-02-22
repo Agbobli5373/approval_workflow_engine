@@ -1,0 +1,25 @@
+{
+  "title": "Laptop Purchase - New Hire (Updated)",
+  "description": "Updated to include docking station",
+  "payload": {
+    "employeeId": "EMP-REQ",
+    "vendor": "Acme Tech Supplies",
+    "businessJustification": "Development workstation and desk setup",
+    "items": [
+      {
+        "sku": "MBP-14-M4",
+        "quantity": 1,
+        "unitPrice": 2450.00
+      },
+      {
+        "sku": "DOCK-USB4",
+        "quantity": 1,
+        "unitPrice": 320.00
+      }
+    ]
+  },
+  "amount": 2770.00,
+  "currency": "USD",
+  "department": "Finance",
+  "costCenter": "CC-100"
+}

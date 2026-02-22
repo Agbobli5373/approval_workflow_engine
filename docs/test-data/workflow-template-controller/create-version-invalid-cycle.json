@@ -1,0 +1,48 @@
+{
+  "graph": {
+    "nodes": [
+      {
+        "id": "start",
+        "type": "START"
+      },
+      {
+        "id": "manager_approval",
+        "type": "APPROVAL",
+        "assignment": {
+          "strategy": "ROLE",
+          "role": "MANAGER"
+        }
+      },
+      {
+        "id": "finance_approval",
+        "type": "APPROVAL",
+        "assignment": {
+          "strategy": "ROLE",
+          "role": "FINANCE"
+        }
+      },
+      {
+        "id": "end",
+        "type": "END"
+      }
+    ],
+    "edges": [
+      {
+        "from": "start",
+        "to": "manager_approval"
+      },
+      {
+        "from": "manager_approval",
+        "to": "finance_approval"
+      },
+      {
+        "from": "finance_approval",
+        "to": "manager_approval"
+      },
+      {
+        "from": "finance_approval",
+        "to": "end"
+      }
+    ]
+  }
+}
