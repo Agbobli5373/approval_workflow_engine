@@ -470,7 +470,8 @@ class WorkflowTemplateApiTest {
               ],
               "edges":[
                 {"from":"start","to":"gate"},
-                {"from":"gate","to":"end"}
+                {"from":"gate","to":"end","condition":{"branch":true}},
+                {"from":"gate","to":"end","condition":{"branch":false}}
               ]
             }
             """;
@@ -486,7 +487,8 @@ class WorkflowTemplateApiTest {
               ],
               "edges":[
                 {"from":"start","to":"gate"},
-                {"from":"gate","to":"end"}
+                {"from":"gate","to":"end","condition":{"branch":true}},
+                {"from":"gate","to":"end","condition":{"branch":false}}
               ]
             }
             """.formatted(ruleSetKey, version);
