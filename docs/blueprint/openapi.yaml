@@ -2,9 +2,9 @@ openapi: 3.1.0
 info:
   title: Approval Workflow Engine API
   version: 1.0.0
-  description: API-first contract for the Spring Boot 4 Approval Workflow Engine.
+  description: API-first contract for the Spring Boot 4 Approval Workflow Engine. Versioning uses the API-Version request header (default 1.0).
 servers:
-  - url: /api/v1
+  - url: /api
 security:
   - bearerAuth: []
 tags:
@@ -16,6 +16,8 @@ tags:
   - name: Webhooks
 paths:
   /auth/login:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
     post:
       tags: [Auth]
       operationId: login
@@ -42,6 +44,8 @@ paths:
           $ref: '#/components/responses/RateLimited'
 
   /auth/logout:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
     post:
       tags: [Auth]
       operationId: logout
@@ -53,6 +57,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
 
   /auth/me:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
     get:
       tags: [Auth]
       operationId: me
@@ -68,6 +74,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
 
   /requests:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
     post:
       tags: [Requests]
       operationId: createRequest
@@ -113,6 +121,8 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
   /requests/{requestId}:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
     get:
       tags: [Requests]
       operationId: getRequest
@@ -160,6 +170,8 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
   /requests/{requestId}/submit:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
     post:
       tags: [Requests]
       operationId: submitRequest
@@ -185,6 +197,8 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
   /requests/{requestId}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
     post:
       tags: [Requests]
       operationId: cancelRequest
@@ -209,6 +223,8 @@ paths:
           $ref: '#/components/responses/Conflict'
 
   /tasks:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
     get:
       tags: [Tasks]
       operationId: listTasks
@@ -238,6 +254,8 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
   /tasks/{taskId}/claim:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
     post:
       tags: [Tasks]
       operationId: claimTask
@@ -261,6 +279,8 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
   /tasks/{taskId}/decisions:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
     post:
       tags: [Tasks]
       operationId: decideTask
@@ -293,6 +313,8 @@ paths:
           $ref: '#/components/responses/Conflict'
 
   /workflow-definitions:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
     post:
       tags: [Workflows]
       operationId: createWorkflowDefinition
@@ -317,6 +339,8 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
   /workflow-definitions/{definitionKey}/versions:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
     post:
       tags: [Workflows]
       operationId: createWorkflowVersion
@@ -345,6 +369,8 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
   /workflow-versions/{workflowVersionId}/activate:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
     post:
       tags: [Workflows]
       operationId: activateWorkflowVersion
@@ -367,6 +393,8 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
   /workflow-versions/{workflowVersionId}:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
     get:
       tags: [Workflows]
       operationId: getWorkflowVersion
@@ -388,6 +416,8 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   /requests/{requestId}/audit:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
     get:
       tags: [Audit]
       operationId: getRequestAudit
@@ -411,6 +441,8 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   /webhooks/subscriptions:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
     post:
       tags: [Webhooks]
       operationId: createWebhookSubscription
@@ -461,6 +493,13 @@ components:
       bearerFormat: JWT
 
   parameters:
+    ApiVersion:
+      name: API-Version
+      in: header
+      required: false
+      schema:
+        type: string
+        default: "1.0"
     RequestId:
       name: requestId
       in: path

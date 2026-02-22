@@ -11,12 +11,17 @@ This preserves production OIDC alignment while enabling zero-setup local/test au
 
 ## Security Modes
 
+API versioning:
+
+- Base path is `/api`.
+- Endpoints use Spring API versioning via optional `API-Version` header (default `1.0`).
+
 ### `LOCAL_AUTH`
 
 - Enabled in `local` and `test` profiles.
-- Login endpoint: `POST /api/v1/auth/login`.
-- Logout endpoint: `POST /api/v1/auth/logout`.
-- Current user endpoint: `GET /api/v1/auth/me`.
+- Login endpoint: `POST /api/auth/login`.
+- Logout endpoint: `POST /api/auth/logout`.
+- Current user endpoint: `GET /api/auth/me`.
 - Token revocation on logout via persisted `jti` in `auth_token_revocations`.
 - JWT signature: `HS256` with `app.security.jwt.hmac-secret`.
 
@@ -63,7 +68,7 @@ Mapped authorities are normalized to `ROLE_*`.
 ## Endpoint Rules
 
 - Public:
-  - `POST /api/v1/auth/login` in `LOCAL_AUTH` only.
+  - `POST /api/auth/login` in `LOCAL_AUTH` only.
   - `/actuator/health/liveness`.
   - `/swagger-ui/**` and `/v3/api-docs/**` in `LOCAL_AUTH`.
 - Admin-only:

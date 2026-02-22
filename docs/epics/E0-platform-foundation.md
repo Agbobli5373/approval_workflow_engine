@@ -35,7 +35,7 @@ Establish a production-ready Spring Boot 4 baseline with clear module boundaries
 4. Create foundational tables needed globally (idempotency key registry, outbox table shell, common enum strategy if used).
 5. Implement a global exception handler with deterministic error JSON.
 6. Add request correlation middleware/filter and include correlation id in logs.
-7. Add base OpenAPI scaffolding and API versioning strategy (`/api/v1`).
+7. Add base OpenAPI scaffolding and API versioning strategy (`/api` + API version header).
 8. Add smoke tests:
    - context boot test
    - DB connectivity test

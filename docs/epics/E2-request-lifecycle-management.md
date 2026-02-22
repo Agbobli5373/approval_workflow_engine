@@ -15,13 +15,14 @@ Implement the request lifecycle with strict state transitions, ownership rules, 
   - `REJECTED`
   - `CANCELLED`
   - `EXPIRED`
-- Request APIs under `/api/v1/requests`:
-  - `POST /api/v1/requests`
-  - `PATCH /api/v1/requests/{requestId}`
-  - `POST /api/v1/requests/{requestId}/submit` (`Idempotency-Key` required)
-  - `POST /api/v1/requests/{requestId}/cancel` (`Idempotency-Key` required)
-  - `GET /api/v1/requests/{requestId}`
-  - `GET /api/v1/requests`
+- Request APIs under `/api/requests`:
+  - `POST /api/requests`
+  - `PATCH /api/requests/{requestId}`
+  - `POST /api/requests/{requestId}/submit` (`Idempotency-Key` required)
+  - `POST /api/requests/{requestId}/cancel` (`Idempotency-Key` required)
+  - `GET /api/requests/{requestId}`
+  - `GET /api/requests`
+- API versioning uses optional `API-Version` header (default `1.0`).
 - Ownership enforcement:
   - non-admin actors can only access their own requests
   - `WORKFLOW_ADMIN` can access all requests

@@ -10,11 +10,12 @@ Deliver production-ready authentication/authorization with dual-mode behavior:
 ## Implemented Features
 
 - Dual-mode security mode property: `app.security.mode`.
+- API versioning via `API-Version` header (default `1.0`) with `/api` base path.
 - JWT bearer auth for all protected routes.
 - Local/test auth endpoints:
-  - `POST /api/v1/auth/login`
-  - `POST /api/v1/auth/logout`
-  - `GET /api/v1/auth/me`
+  - `POST /api/auth/login`
+  - `POST /api/auth/logout`
+  - `GET /api/auth/me`
 - RBAC protection:
   - Swagger/OpenAPI endpoints are public in `LOCAL_AUTH` and require `ROLE_WORKFLOW_ADMIN` in `OIDC_RESOURCE_SERVER`.
   - Liveness endpoint is public.
