@@ -59,6 +59,15 @@ This plan defines baseline schema objects and migration order for the Approval W
   - `(rule_set_key, version_no)`.
 - Workflow template activation now enforces gateway `ruleRef` existence/version checks against `rule_sets`.
 
+## E5 Implementation Note
+
+- E5 applies `V7__workflow_runtime_instances_tasks.sql` in both PostgreSQL and H2 migration tracks.
+- Runtime execution persists:
+  - `workflow_instances`
+  - `tasks`
+  - `task_decisions`
+- Request submit now starts runtime synchronously and transitions request status to `IN_REVIEW` unless the workflow completes in the same transaction.
+
 ## Core Tables
 
 ### `users`

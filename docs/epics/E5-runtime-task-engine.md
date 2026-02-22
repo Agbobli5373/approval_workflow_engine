@@ -2,59 +2,67 @@
 
 ## Epic Goal
 
-Execute submitted requests through workflow runtime instances, generate actionable tasks, and safely process decisions under concurrency.
+Execute submitted requests through workflow runtime instances, generate actionable tasks, and safely process task claim/decision flows under concurrency.
 
-## Features To Implement
+## Implemented Scope
 
-- Workflow instance creation at request submission.
-- Task generation for sequential and parallel steps.
-- Task statuses:
-  - `PENDING`
-  - `CLAIMED`
-  - `APPROVED`
-  - `REJECTED`
-  - `CANCELLED`
-  - `EXPIRED`
-  - `SKIPPED`
+- Runtime schema via `V7__workflow_runtime_instances_tasks.sql` (PostgreSQL + H2):
+  - `workflow_instances`
+  - `tasks`
+  - `task_decisions`
+- Runtime module delivery in `workflowruntime`:
+  - JPA entities/repositories/services/controllers
+  - runtime graph traversal for `START`, `APPROVAL`, `GATEWAY`, `JOIN`, `END`
+- Request integration:
+  - submit now bootstraps runtime synchronously
+  - submit transitions to `IN_REVIEW` unless workflow finishes immediately
+  - cancel on `IN_REVIEW` cancels active runtime tasks/instance
 - Task APIs:
-  - `GET /tasks?assignedTo=me&status=PENDING`
-  - `POST /tasks/{id}/claim`
-  - `POST /tasks/{id}/decisions`
-- Decision actions:
-  - `APPROVE`
-  - `REJECT`
-  - `SEND_BACK`
-  - `DELEGATE`
-- Parallel join semantics (`ALL`, `ANY`, `QUORUM`).
-- Idempotency and optimistic locking for claim/decision actions.
+  - `GET /api/tasks`
+  - `POST /api/tasks/{taskId}/claim`
+  - `POST /api/tasks/{taskId}/decisions`
+- Decision behavior:
+  - `APPROVE`, `REJECT`, `SEND_BACK` supported
+  - `DELEGATE` returns `409 CONFLICT` in E5
+  - comments required for `REJECT` and `SEND_BACK`
+- Join behavior:
+  - `ALL`, `ANY`, `QUORUM` supported
+  - for `ANY`/`QUORUM`, remaining pending sibling tasks are auto-marked `SKIPPED`
+- Runtime policy defaults:
+  - claim required before decision actions
+  - RULE assignment strategy rejected at runtime in E5
+  - task list default (`assignedTo` omitted) = me + role union
+- Gateway activation validation strengthened:
+  - exactly two outgoing edges
+  - explicit `condition.branch=true|false`
+- Local/test seed alignment:
+  - default EXPENSE workflow now uses `APPROVER` role
 
-## Detailed Implementation Guide
+## Implemented Artifacts
 
-1. Design runtime schema:
-   - workflow instances
-   - runtime step state
-   - tasks
-   - decision records
-2. Build runtime orchestrator to advance state machine after each decision.
-3. Implement assignment resolver (user, role, rule-driven resolver output).
-4. Implement claim flow with ownership and claim timestamp.
-5. Implement decision flow with policy checks and required comments for `REJECT`/`SEND_BACK`.
-6. Implement parallel step resolution and join completion tracking.
-7. Add idempotency key handling for decision endpoint.
-8. Apply optimistic locking to prevent double-advance under concurrent decisions.
-9. Emit audit and outbox events transactionally with state changes.
-10. Add concurrency tests for duplicate decision and parallel approval races.
+- Runtime service: `src/main/java/com/isaac/approvalworkflowengine/workflowruntime/service/WorkflowRuntimeService.java`
+- Task controller: `src/main/java/com/isaac/approvalworkflowengine/workflowruntime/api/TaskController.java`
+- Request integration: `src/main/java/com/isaac/approvalworkflowengine/requests/service/RequestLifecycleService.java`
+- Runtime migrations:
+  - `src/main/resources/db/migration/postgresql/V7__workflow_runtime_instances_tasks.sql`
+  - `src/main/resources/db/migration/h2/V7__workflow_runtime_instances_tasks.sql`
+- Gateway branch validation:
+  - `src/main/java/com/isaac/approvalworkflowengine/workflowtemplate/validation/WorkflowGraphValidator.java`
 
-## Deliverables
+## Test Coverage
 
-- Runtime engine service and persistence layer.
-- Task APIs and filtering.
-- Concurrency-safe decision processing.
+- `src/test/java/com/isaac/approvalworkflowengine/workflowruntime/WorkflowRuntimeSubmitIntegrationTest.java`
+- `src/test/java/com/isaac/approvalworkflowengine/workflowruntime/TaskClaimApiTest.java`
+- `src/test/java/com/isaac/approvalworkflowengine/workflowruntime/TaskDecisionApiTest.java`
+- `src/test/java/com/isaac/approvalworkflowengine/workflowruntime/JoinPolicyIntegrationTest.java`
+- `src/test/java/com/isaac/approvalworkflowengine/workflowtemplate/WorkflowGatewayBranchValidationTest.java`
+- Updated request and migration coverage:
+  - `src/test/java/com/isaac/approvalworkflowengine/requests/RequestLifecycleApiTest.java`
+  - `src/test/java/com/isaac/approvalworkflowengine/platform/MigrationSmokeTest.java`
 
-## Acceptance Criteria
+## Deferred to Later Epics
 
-- Request submission creates exactly one workflow runtime instance.
-- Duplicate decision retries do not double-apply workflow progression.
-- Parallel joins respect `ALL`, `ANY`, and `QUORUM` behavior exactly.
-- `REJECT` and `SEND_BACK` enforce comment policy.
-- Task list endpoint returns only authorized and assigned tasks.
+- Delegation execution behavior (E6)
+- SLA/escalation scheduler behavior (E7/E8)
+- Full append-only audit writes (E9)
+- Transactional outbox publishing (E10)

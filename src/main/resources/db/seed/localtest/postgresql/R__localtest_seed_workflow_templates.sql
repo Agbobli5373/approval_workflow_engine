@@ -45,7 +45,7 @@ VALUES (
     '11111111-0000-0000-0000-000000000001',
     1,
     'ACTIVE',
-    '{"nodes":[{"id":"end","type":"END"},{"id":"manager_approval","type":"APPROVAL","assignment":{"strategy":"ROLE","role":"MANAGER"}},{"id":"start","type":"START"}],"edges":[{"from":"manager_approval","to":"end"},{"from":"start","to":"manager_approval"}]}'::jsonb,
+    '{"nodes":[{"id":"end","type":"END"},{"id":"manager_approval","type":"APPROVAL","assignment":{"strategy":"ROLE","role":"APPROVER"}},{"id":"start","type":"START"}],"edges":[{"from":"manager_approval","to":"end"},{"from":"start","to":"manager_approval"}]}'::jsonb,
     'fc2866bf748523caa273fb33abc9235ac9cf0444e92431f6d03b61546c4d4493',
     CURRENT_TIMESTAMP,
     'a0d11f04-2e54-4b0e-bf14-7d9e05cbef4a',
@@ -90,7 +90,7 @@ VALUES
         '11111111-1111-1111-1111-111111111111',
         'manager_approval',
         'APPROVAL',
-        '{"assignment":{"strategy":"ROLE","role":"MANAGER"}}'::jsonb,
+        '{"assignment":{"strategy":"ROLE","role":"APPROVER"}}'::jsonb,
         CURRENT_TIMESTAMP
     ),
     (

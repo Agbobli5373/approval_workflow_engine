@@ -234,6 +234,7 @@ paths:
         - name: assignedTo
           in: query
           required: false
+          description: "Omit to include both direct (me) and role-based (role) assignments."
           schema:
             type: string
             enum: [me, role]
@@ -731,6 +732,7 @@ components:
 
     TaskDecisionAction:
       type: string
+      description: "DELEGATE is reserved in the contract and returns 409 CONFLICT in Epic E5."
       enum: [APPROVE, REJECT, SEND_BACK, DELEGATE]
 
     WorkflowVersionStatus:
@@ -964,6 +966,9 @@ components:
         to: { type: string, minLength: 1, maxLength: 80 }
         condition:
           type: object
+          description: "For GATEWAY edges, condition.branch must be boolean and defined as one true and one false branch."
+          properties:
+            branch: { type: boolean }
           additionalProperties: true
 
     WorkflowAssignment:
