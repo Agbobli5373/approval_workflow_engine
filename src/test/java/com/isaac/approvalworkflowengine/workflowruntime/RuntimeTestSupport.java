@@ -13,6 +13,10 @@ import org.springframework.test.web.servlet.MvcResult;
 
 final class RuntimeTestSupport {
 
+    static final UUID ADMIN_USER_ID = UUID.fromString("a0d11f04-2e54-4b0e-bf14-7d9e05cbef4a");
+    static final UUID REQUESTOR_USER_ID = UUID.fromString("5ad15712-2c98-4b9d-8f1d-6baf6a4f6d78");
+    static final UUID APPROVER_USER_ID = UUID.fromString("6f6ea9ed-4c1a-4302-a7ab-2c9f4bf4384f");
+
     private RuntimeTestSupport() {
     }
 

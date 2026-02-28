@@ -10,6 +10,9 @@ import com.isaac.approvalworkflowengine.rules.RuleSetRuntimeEvaluator;
 import com.isaac.approvalworkflowengine.rules.model.RuleEvaluationContext;
 import com.isaac.approvalworkflowengine.shared.api.ApiErrorDetail;
 import com.isaac.approvalworkflowengine.shared.error.BadRequestException;
+import com.isaac.approvalworkflowengine.users.DelegationPolicyLookup;
+import com.isaac.approvalworkflowengine.users.DelegationPolicyLookup.DelegationAuthorization;
+import com.isaac.approvalworkflowengine.users.DelegationPolicyLookup.DelegationTaskContext;
 import com.isaac.approvalworkflowengine.workflowruntime.api.PagedTaskResource;
 import com.isaac.approvalworkflowengine.workflowruntime.api.TaskAssignedToFilter;
 import com.isaac.approvalworkflowengine.workflowruntime.api.TaskDecisionInput;
@@ -48,20 +51,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.util.ArrayDeque;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.HexFormat;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -104,6 +95,7 @@ public class WorkflowRuntimeService {
     private final WorkflowTemplateRuntimeLookup workflowTemplateRuntimeLookup;
     private final RuleSetRuntimeEvaluator ruleSetRuntimeEvaluator;
     private final AccessPolicyService accessPolicyService;
+    private final DelegationPolicyLookup delegationPolicyLookup;
     private final ObjectMapper objectMapper;
 
     public WorkflowRuntimeService(
@@ -116,6 +108,7 @@ public class WorkflowRuntimeService {
         WorkflowTemplateRuntimeLookup workflowTemplateRuntimeLookup,
         RuleSetRuntimeEvaluator ruleSetRuntimeEvaluator,
         AccessPolicyService accessPolicyService,
+        DelegationPolicyLookup delegationPolicyLookup,
         ObjectMapper objectMapper
     ) {
         this.workflowInstanceJpaRepository = workflowInstanceJpaRepository;
@@ -127,6 +120,7 @@ public class WorkflowRuntimeService {
         this.workflowTemplateRuntimeLookup = workflowTemplateRuntimeLookup;
         this.ruleSetRuntimeEvaluator = ruleSetRuntimeEvaluator;
         this.accessPolicyService = accessPolicyService;
+        this.delegationPolicyLookup = delegationPolicyLookup;
         this.objectMapper = objectMapper;
     }
 
@@ -255,7 +249,7 @@ public class WorkflowRuntimeService {
         RuntimeRequestEntity request = runtimeRequestJpaRepository.findById(task.getRequestId())
             .orElseThrow(() -> new NoSuchElementException("Request not found"));
 
-        authorizeTaskAction(task, request, actor);
+        resolveTaskAuthorization(task, request, actor);
 
         if (task.getStatus() == TaskStatus.PENDING) {
             task.setStatus(TaskStatus.CLAIMED);
@@ -296,7 +290,12 @@ public class WorkflowRuntimeService {
             .orElse(null);
 
         if (existingDecision != null) {
-            ensureMatchingDecision(existingDecision, input, actor);
+            TaskEntity existingTask = taskJpaRepository.findById(taskId)
+                .orElseThrow(() -> new NoSuchElementException("Task not found"));
+            RuntimeRequestEntity existingRequest = runtimeRequestJpaRepository.findById(existingTask.getRequestId())
+                .orElseThrow(() -> new NoSuchElementException("Request not found"));
+            TaskAuthorization authorization = resolveTaskAuthorization(existingTask, existingRequest, actor);
+            ensureMatchingDecision(existingDecision, input, actor, authorization);
             return toTaskDecisionResource(existingDecision);
         }
 
@@ -309,7 +308,7 @@ public class WorkflowRuntimeService {
         WorkflowInstanceEntity instance = workflowInstanceJpaRepository.findByIdForUpdate(task.getWorkflowInstanceId())
             .orElseThrow(() -> new NoSuchElementException("Workflow instance not found"));
 
-        authorizeTaskAction(task, request, actor);
+        TaskAuthorization authorization = resolveTaskAuthorization(task, request, actor);
 
         if (task.getStatus() != TaskStatus.CLAIMED || !Objects.equals(task.getClaimedByUserId(), actor.userId())) {
             throw new IllegalStateException("Task must be claimed by the acting user before deciding");
@@ -326,7 +325,7 @@ public class WorkflowRuntimeService {
         decisionEntity.setAction(action);
         decisionEntity.setComment(trimToNull(input.comment()));
         decisionEntity.setActedByUserId(actor.userId());
-        decisionEntity.setActedOnBehalfOfUserId(null);
+        decisionEntity.setActedOnBehalfOfUserId(authorization.actedOnBehalfOfUserId());
         decisionEntity.setIdempotencyKey(idempotencyKey);
 
         if (action == TaskDecisionAction.APPROVE) {
@@ -378,7 +377,7 @@ public class WorkflowRuntimeService {
             TaskDecisionEntity persisted = taskDecisionJpaRepository
                 .findByTaskIdAndIdempotencyKey(taskId, idempotencyKey)
                 .orElseThrow(() -> conflict);
-            ensureMatchingDecision(persisted, input, actor);
+            ensureMatchingDecision(persisted, input, actor, authorization);
             saved = persisted;
         }
 
@@ -644,7 +643,7 @@ public class WorkflowRuntimeService {
         ));
     }
 
-    private void authorizeTaskAction(TaskEntity task, RuntimeRequestEntity request, TaskActor actor) {
+    private TaskAuthorization resolveTaskAuthorization(TaskEntity task, RuntimeRequestEntity request, TaskActor actor) {
         AccessDecision decision = accessPolicyService.canDecideTask(new TaskAccessContext(
             actor.userId(),
             actor.roles(),
@@ -654,9 +653,24 @@ public class WorkflowRuntimeService {
             request.getDepartment()
         ));
 
-        if (!decision.allowed()) {
-            throw new AccessDeniedException("Task access denied: " + decision.reasonCode());
+        if (decision.allowed()) {
+            return new TaskAuthorization(null);
         }
+
+        Optional<DelegationAuthorization> delegation = delegationPolicyLookup.resolveDelegation(new DelegationTaskContext(
+            actor.userId(),
+            task.getAssigneeUserId(),
+            task.getAssigneeRole(),
+            request.getRequestType(),
+            request.getDepartment(),
+            Instant.now()
+        ));
+
+        if (delegation.isPresent()) {
+            return new TaskAuthorization(delegation.get().delegatorUserId());
+        }
+
+        throw new AccessDeniedException("Task access denied: " + decision.reasonCode());
     }
 
     private void ensureDecisionCommentRequired(TaskDecisionAction action, String comment) {
@@ -668,13 +682,19 @@ public class WorkflowRuntimeService {
         }
     }
 
-    private void ensureMatchingDecision(TaskDecisionEntity existing, TaskDecisionInput input, TaskActor actor) {
+    private void ensureMatchingDecision(
+        TaskDecisionEntity existing,
+        TaskDecisionInput input,
+        TaskActor actor,
+        TaskAuthorization authorization
+    ) {
         String inputComment = trimToNull(input.comment());
         String existingComment = trimToNull(existing.getComment());
 
         boolean matches = existing.getAction() == input.action()
             && Objects.equals(existingComment, inputComment)
-            && Objects.equals(existing.getActedByUserId(), actor.userId());
+            && Objects.equals(existing.getActedByUserId(), actor.userId())
+            && Objects.equals(existing.getActedOnBehalfOfUserId(), authorization.actedOnBehalfOfUserId());
 
         if (!matches) {
             throw new IllegalStateException("Idempotency key has already been used for another task decision");
@@ -811,5 +831,8 @@ public class WorkflowRuntimeService {
     }
 
     private record RuntimeProgressResult(RuntimeRequestStatus terminalRequestStatus) {
+    }
+
+    private record TaskAuthorization(UUID actedOnBehalfOfUserId) {
     }
 }
