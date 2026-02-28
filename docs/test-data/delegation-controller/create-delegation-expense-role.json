@@ -1,0 +1,9 @@
+{
+  "delegateUserId": "5ad15712-2c98-4b9d-8f1d-6baf6a4f6d78",
+  "requestType": "EXPENSE",
+  "department": "Finance",
+  "role": "APPROVER",
+  "allScope": false,
+  "validFrom": "2026-01-01T00:00:00Z",
+  "validUntil": "2030-01-01T00:00:00Z"
+}

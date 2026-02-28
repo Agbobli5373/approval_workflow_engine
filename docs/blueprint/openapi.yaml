@@ -11,6 +11,7 @@ tags:
   - name: Auth
   - name: Requests
   - name: Tasks
+  - name: Delegations
   - name: Workflows
   - name: Rules
   - name: Audit
@@ -313,6 +314,88 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+
+  /delegations:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
+    post:
+      tags: [Delegations]
+      operationId: createDelegation
+      summary: Create delegation policy for acting on behalf of another user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DelegationCreateInput'
+      responses:
+        '201':
+          description: Delegation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DelegationResource'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    get:
+      tags: [Delegations]
+      operationId: listDelegations
+      summary: List delegations visible to the current actor
+      parameters:
+        - name: active
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: asDelegator
+          in: query
+          required: false
+          description: "When true, list policies where actor is delegator. When false, list where actor is delegate."
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Delegation list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DelegationResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /delegations/{delegationId}/revoke:
+    parameters:
+      - $ref: '#/components/parameters/ApiVersion'
+    post:
+      tags: [Delegations]
+      operationId: revokeDelegation
+      summary: Revoke an active delegation immediately
+      parameters:
+        - $ref: '#/components/parameters/DelegationId'
+      responses:
+        '200':
+          description: Delegation revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DelegationResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /workflow-definitions:
     parameters:
@@ -620,6 +703,11 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    DelegationId:
+      name: delegationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     DefinitionKey:
       name: definitionKey
       in: path
@@ -891,6 +979,40 @@ components:
         actedByUserId: { type: string, format: uuid }
         actedOnBehalfOfUserId: { type: string, format: uuid, nullable: true }
         createdAt: { type: string, format: date-time }
+
+    DelegationCreateInput:
+      type: object
+      required: [delegateUserId, validFrom, validUntil]
+      properties:
+        delegatorUserId: { type: string, format: uuid, nullable: true }
+        delegateUserId: { type: string, format: uuid }
+        requestType: { type: string, maxLength: 80, nullable: true }
+        department: { type: string, maxLength: 80, nullable: true }
+        role: { type: string, maxLength: 64, nullable: true }
+        allScope:
+          type: boolean
+          default: false
+          description: "When true, requestType/department/role are ignored."
+        validFrom: { type: string, format: date-time }
+        validUntil: { type: string, format: date-time }
+
+    DelegationResource:
+      type: object
+      required: [id, delegatorUserId, delegateUserId, allScope, validFrom, validUntil, active, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        delegatorUserId: { type: string, format: uuid }
+        delegateUserId: { type: string, format: uuid }
+        requestType: { type: string, nullable: true }
+        department: { type: string, nullable: true }
+        role: { type: string, nullable: true }
+        allScope: { type: boolean }
+        validFrom: { type: string, format: date-time }
+        validUntil: { type: string, format: date-time }
+        active: { type: boolean }
+        revokedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
 
     WorkflowDefinitionInput:
       type: object

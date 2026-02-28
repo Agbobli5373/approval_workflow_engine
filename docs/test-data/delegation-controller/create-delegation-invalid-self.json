@@ -1,0 +1,8 @@
+{
+  "delegateUserId": "6f6ea9ed-4c1a-4302-a7ab-2c9f4bf4384f",
+  "requestType": "EXPENSE",
+  "role": "APPROVER",
+  "allScope": false,
+  "validFrom": "2026-01-01T00:00:00Z",
+  "validUntil": "2030-01-01T00:00:00Z"
+}

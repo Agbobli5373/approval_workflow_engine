@@ -2,46 +2,66 @@
 
 ## Epic Goal
 
-Allow approvers to delegate decisions safely within controlled scope and time windows while preserving accountability.
+Allow controlled approval delegation so a delegate can act for a delegator within a strict scope and validity window, while preserving accountability in task decisions.
 
-## Features To Implement
+## Implemented Scope
 
-- Delegation policy model:
-  - delegator
-  - delegatee
-  - validity window
-  - scope (request type, department, role, or all)
-- Delegation creation/update/revoke APIs (admin/self policy-driven).
-- Runtime delegation resolution during task assignment and decision authorization.
-- "Acted on behalf of" metadata on task decisions and audit records.
+- Delegation schema via `V8__delegations.sql` (PostgreSQL + H2):
+  - `delegations`
+- Users module delegation delivery:
+  - create/list/revoke delegation APIs
+  - overlap, scope, and window validation
+  - runtime delegation lookup port
+- Runtime authorization integration:
+  - task claim/decision first checks ABAC policy
+  - if denied, checks active matching delegation policy
+  - delegated decisions persist `actedOnBehalfOfUserId`
+- Delegation conflict handling:
+  - overlapping active same-scope delegations rejected
+  - multiple runtime matches rejected to avoid ambiguous actor mapping
 
-## Detailed Implementation Guide
+## Implemented Artifacts
 
-1. Add delegation tables and indexes by delegator/delegatee/time window.
-2. Implement delegation policy validation:
-   - non-overlapping conflicts per policy choice
-   - valid date window
-   - scope integrity
-3. Implement resolver that maps actionable task to effective actor chain.
-4. Update ABAC checks to accept delegate decisions only when policy scope matches task context.
-5. Record both `actorId` and `actedOnBehalfOfId` on decision records.
-6. Emit audit events with delegation metadata.
-7. Add read endpoint/query support for active delegation policies.
-8. Add tests for:
-   - valid delegated approval
-   - expired delegation rejection
-   - out-of-scope delegation rejection
+- Delegation module API and service:
+  - `src/main/java/com/isaac/approvalworkflowengine/users/api/DelegationController.java`
+  - `src/main/java/com/isaac/approvalworkflowengine/users/service/DelegationService.java`
+  - `src/main/java/com/isaac/approvalworkflowengine/users/DelegationPolicyLookup.java`
+- Delegation persistence:
+  - `src/main/java/com/isaac/approvalworkflowengine/users/repository/entity/DelegationEntity.java`
+  - `src/main/java/com/isaac/approvalworkflowengine/users/repository/DelegationJpaRepository.java`
+- Runtime integration:
+  - `src/main/java/com/isaac/approvalworkflowengine/workflowruntime/service/WorkflowRuntimeService.java`
+- Migrations:
+  - `src/main/resources/db/migration/postgresql/V8__delegations.sql`
+  - `src/main/resources/db/migration/h2/V8__delegations.sql`
 
-## Deliverables
+## API Endpoints
 
-- Delegation domain model and APIs.
-- Runtime authorization integration for delegation.
-- Audit/event enrichment for delegated actions.
+- `POST /api/delegations`
+- `GET /api/delegations`
+- `POST /api/delegations/{delegationId}/revoke`
 
-## Acceptance Criteria
+## Test Coverage
 
-- Delegated decisions are accepted only inside active scope and time window.
-- All delegated actions record both acting and represented user identity.
-- Unauthorized delegate attempts return 403 and generate security/audit signal.
-- Revoked delegation is effective immediately for new decisions.
-- Delegation tests cover scope boundaries and expiration edge cases.
+- Delegation API tests:
+  - `src/test/java/com/isaac/approvalworkflowengine/users/DelegationApiTest.java`
+- Runtime delegation behavior tests:
+  - `src/test/java/com/isaac/approvalworkflowengine/workflowruntime/TaskDelegationApiTest.java`
+- Migration coverage update:
+  - `src/test/java/com/isaac/approvalworkflowengine/platform/MigrationSmokeTest.java`
+
+## Acceptance Criteria Mapping
+
+- Delegated decisions only inside valid scope/time:
+  - covered by runtime tests for valid, expired, and out-of-scope scenarios.
+- Acting and represented users are both recorded:
+  - covered by `TaskDelegationApiTest` asserting `actedOnBehalfOfUserId`.
+- Revoked delegation is effective:
+  - supported by `active=false` + `revokedAt` checks in resolver and revoke API behavior.
+- Unauthorized delegation attempts fail:
+  - covered by API and runtime `403` scenarios.
+
+## Deferred
+
+- Delegation-specific audit event persistence remains deferred to E9.
+- Delegation-related outbox/integration events remain deferred to E10.

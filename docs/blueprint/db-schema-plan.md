@@ -68,6 +68,12 @@ This plan defines baseline schema objects and migration order for the Approval W
   - `task_decisions`
 - Request submit now starts runtime synchronously and transitions request status to `IN_REVIEW` unless the workflow completes in the same transaction.
 
+## E6 Implementation Note
+
+- E6 applies `V8__delegations.sql` in both PostgreSQL and H2 migration tracks.
+- Delegation runtime authorization is now DB-backed via `delegations`.
+- Delegated task actions persist represented identity in `task_decisions.acted_on_behalf_of_user_id`.
+
 ## Core Tables
 
 ### `users`
@@ -267,16 +273,24 @@ Indexes:
 - `id uuid pk`
 - `delegator_user_id uuid not null`
 - `delegate_user_id uuid not null`
-- `scope_json jsonb not null`
+- `request_type varchar(80) null`
+- `department varchar(80) null`
+- `role_code varchar(64) null`
+- `all_scope boolean not null default false`
 - `valid_from timestamptz not null`
 - `valid_until timestamptz not null`
 - `active boolean not null default true`
-- timestamps
+- `revoked_at timestamptz null`
+- `created_by_user_id uuid not null`
+- `version bigint not null`
+- `created_at timestamptz not null`
+- `updated_at timestamptz not null`
 
 Indexes:
 
 - `idx_delegations_delegator_window`
 - `idx_delegations_delegate_window`
+- `idx_delegations_delegate_active`
 
 ## SLA/Escalation Tables
 

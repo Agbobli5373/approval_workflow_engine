@@ -3,10 +3,12 @@
 This guide gives you ready test data and command flows for:
 - `/api/requests` (`RequestController`)
 - `/api/workflow-definitions/*` and `/api/workflow-versions/*` (`WorkflowTemplateController`)
+- `/api/delegations*` (`DelegationController`)
 
 All payload files referenced below are in:
 - `docs/test-data/request-controller/`
 - `docs/test-data/workflow-template-controller/`
+- `docs/test-data/delegation-controller/`
 
 ## 1. Local Seed Users and Credentials
 
@@ -177,7 +179,7 @@ curl -i -X POST "$BASE_URL/api/requests/$REQUEST_ID/submit" \
   -H "Idempotency-Key: submit-req-001"
 ```
 
-Expected: `202 Accepted`, `status = SUBMITTED`, `workflowVersionId` bound from active `EXPENSE` template.
+Expected: `202 Accepted`, `status = IN_REVIEW`, `workflowVersionId` bound from active `EXPENSE` template.
 
 ### 6.4 Repeat submit with same idempotency key
 
@@ -190,7 +192,7 @@ curl -i -X POST "$BASE_URL/api/requests/$REQUEST_ID/submit" \
 
 Expected: deterministic result, no duplicate transition.
 
-### 6.5 Cancel request (allowed from SUBMITTED)
+### 6.5 Cancel request (allowed from IN_REVIEW)
 
 ```bash
 curl -i -X POST "$BASE_URL/api/requests/$REQUEST_ID/cancel" \
@@ -234,4 +236,76 @@ Expected: `400 Bad Request` with `ApiError.code = VALIDATION_ERROR`.
 
 - `WorkflowTemplateController` endpoints require admin role (`WORKFLOW_ADMIN`); call with `requestor` token to get `403`.
 - `RequestController` allows authenticated users, but non-admin users can only read/update their own requests.
+- `DelegationController` allows authenticated users, but only admins can create/revoke delegations on behalf of another delegator.
 
+## 8. DelegationController Test Data and Flows
+
+### 8.1 Approver creates delegation to requestor
+
+Payload file:
+- `docs/test-data/delegation-controller/create-delegation-expense-role.json`
+
+```bash
+APPROVER_TOKEN=$(curl -s -X POST "$BASE_URL/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -H "API-Version: 1.0" \
+  -d '{"usernameOrEmail":"approver","password":"password"}' | jq -r '.accessToken')
+
+DELEGATION_ID=$(curl -s -X POST "$BASE_URL/api/delegations" \
+  -H "Authorization: Bearer $APPROVER_TOKEN" \
+  -H "API-Version: 1.0" \
+  -H "Content-Type: application/json" \
+  -d @docs/test-data/delegation-controller/create-delegation-expense-role.json | jq -r '.id')
+```
+
+Expected: `201 Created`, `active = true`.
+
+### 8.2 List current actor delegations
+
+```bash
+curl -i -X GET "$BASE_URL/api/delegations?asDelegator=true&active=true" \
+  -H "Authorization: Bearer $APPROVER_TOKEN" \
+  -H "API-Version: 1.0"
+```
+
+Expected: `200 OK` with delegation entries.
+
+### 8.3 Revoke delegation
+
+```bash
+curl -i -X POST "$BASE_URL/api/delegations/$DELEGATION_ID/revoke" \
+  -H "Authorization: Bearer $APPROVER_TOKEN" \
+  -H "API-Version: 1.0"
+```
+
+Expected: `200 OK`, `active = false`, `revokedAt` is populated.
+
+### 8.4 Admin creates delegation for another delegator
+
+Payload file:
+- `docs/test-data/delegation-controller/create-delegation-admin-on-behalf.json`
+
+```bash
+curl -i -X POST "$BASE_URL/api/delegations" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "API-Version: 1.0" \
+  -H "Content-Type: application/json" \
+  -d @docs/test-data/delegation-controller/create-delegation-admin-on-behalf.json
+```
+
+Expected: `201 Created`.
+
+### 8.5 Invalid self-delegation sample
+
+Payload file:
+- `docs/test-data/delegation-controller/create-delegation-invalid-self.json`
+
+```bash
+curl -i -X POST "$BASE_URL/api/delegations" \
+  -H "Authorization: Bearer $APPROVER_TOKEN" \
+  -H "API-Version: 1.0" \
+  -H "Content-Type: application/json" \
+  -d @docs/test-data/delegation-controller/create-delegation-invalid-self.json
+```
+
+Expected: `400 Bad Request` with `ApiError.code = BAD_REQUEST`.

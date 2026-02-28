@@ -12,8 +12,9 @@ Implemented epics:
 - E3 Workflow Template Versioning
 - E4 Rules Engine (JSON DSL)
 - E5 Runtime Workflow and Task Engine
+- E6 Delegation and Acting-on-Behalf
 
-Deferred epics include delegation execution, SLA escalation, audit ledger, and transactional outbox publishing.
+Deferred epics include SLA escalation, audit ledger, and transactional outbox publishing.
 
 ## Current Capabilities
 
@@ -35,6 +36,9 @@ Deferred epics include delegation execution, SLA escalation, audit ledger, and t
   - claim task (idempotent)
   - decide task (`APPROVE`, `REJECT`, `SEND_BACK`)
   - `DELEGATE` is present in contract but returns `409 CONFLICT` in E5
+- Delegation API:
+  - create, list, revoke delegation policies
+  - runtime delegated claim/decision support with `actedOnBehalfOfUserId` persistence
 - Parallel join execution:
   - `ALL`, `ANY`, `QUORUM`
   - for `ANY` and `QUORUM`, remaining pending siblings are marked `SKIPPED`
@@ -162,6 +166,9 @@ export APP_DB_PASSWORD=approval
 
 - In `LOCAL_AUTH`, Swagger/OpenAPI endpoints are accessible without admin auth for local development.
 - In `OIDC_RESOURCE_SERVER`, Swagger/OpenAPI endpoints require `WORKFLOW_ADMIN`.
+- Delegation create rules:
+  - non-admins can create delegations only for themselves as delegator
+  - admins can create delegations for any delegator
 
 ## Testing
 
