@@ -61,7 +61,19 @@ class MigrationSmokeTest {
     }
 
     @Test
-    void h2FlywayMigrationCreatesPlatformAuthRequestWorkflowTemplateRulesAndRuntimeTables() {
+    void postgresqlDelegationMigrationExists() {
+        assertThat(new ClassPathResource("db/migration/postgresql/V8__delegations.sql").exists())
+            .isTrue();
+    }
+
+    @Test
+    void h2DelegationMigrationExists() {
+        assertThat(new ClassPathResource("db/migration/h2/V8__delegations.sql").exists())
+            .isTrue();
+    }
+
+    @Test
+    void h2FlywayMigrationCreatesPlatformAuthRequestWorkflowTemplateRulesRuntimeAndDelegationTables() {
         Integer tableCount = jdbcTemplate.queryForObject(
             """
             select count(*)
@@ -84,13 +96,14 @@ class MigrationSmokeTest {
                 'RULE_SETS',
                 'WORKFLOW_INSTANCES',
                 'TASKS',
-                'TASK_DECISIONS'
+                'TASK_DECISIONS',
+                'DELEGATIONS'
             )
             """,
             Integer.class
         );
 
-        assertThat(tableCount).isEqualTo(16);
+        assertThat(tableCount).isEqualTo(17);
     }
 
     @Test
@@ -122,5 +135,12 @@ class MigrationSmokeTest {
 
         assertThat(definitionCount).isEqualTo(1);
         assertThat(activeVersionCount).isEqualTo(1);
+    }
+
+    @Test
+    void delegationsTableIsQueryable() {
+        Integer delegationCount = jdbcTemplate.queryForObject("select count(*) from delegations", Integer.class);
+        assertThat(delegationCount).isNotNull();
+        assertThat(delegationCount).isGreaterThanOrEqualTo(0);
     }
 }
